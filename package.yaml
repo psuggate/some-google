@@ -1,0 +1,48 @@
+name:                some-google
+version:             0.1.0.0
+github:              "psuggate/some-google"
+license:             MPL-2.0
+author:              "Patrick Suggate"
+maintainer:          "patrick.suggate@gmail.com"
+copyright:           "Patrick Suggate, 2022"
+
+extra-source-files:
+- README.md
+
+synopsis:            Short description of your package
+category:            Web
+description:         Please see the README on GitHub at <https://github.com/psuggate/some-google#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- gogol
+- gogol-bigquery
+- gogol-core
+- gogol-pubsub
+- google-monad
+
+library:
+  source-dirs: src
+
+executables:
+  some-google-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - some-google
+
+tests:
+  some-google-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hspec
+    - some-google

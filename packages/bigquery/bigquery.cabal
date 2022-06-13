@@ -1,0 +1,45 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           bigquery
+version:        0.1.0.0
+synopsis:       Short description of your package
+description:    Please see the README on GitHub at <https://github.com/githubabuser/google-cloud#readme>
+category:       Web
+author:         Patrick Suggate
+maintainer:     patrick.suggate@gmail.com
+copyright:      2022 SixthSense NZ Ltd
+license:        BSD3
+build-type:     Simple
+extra-source-files:
+    README.md
+
+library
+  exposed-modules:
+      Network.Google.BigQuery
+      Network.Google.BigQuery.Dataset
+      Network.Google.BigQuery.Job
+      Network.Google.BigQuery.Table
+      Network.Google.BigQuery.Tabledata
+      Network.Google.BigQuery.Types
+  other-modules:
+      Paths_bigquery
+  hs-source-dirs:
+      src
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , gogol
+    , gogol-bigquery
+    , gogol-core
+    , google-monad
+    , http-api-data
+    , lens
+    , mtl
+    , relude
+    , resourcet
+    , unliftio-core
+  default-language: Haskell2010
