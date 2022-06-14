@@ -1,0 +1,30 @@
+name:                logging-truck-google
+version:             0.1.0.0
+github:              "psuggate/some-google"
+license:             BSD3
+author:              "Patrick Suggate"
+maintainer:          "patrick.suggate@gmail.com"
+copyright:           "2022 Patrick Suggate"
+
+extra-source-files:
+- README.md
+
+synopsis:            Short description of your package
+category:            Web
+description:         Please see the README on GitHub at <https://github.com/psuggate/some-google/packages/logging-truck-google#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- co-log-core
+- gogol
+- gogol-bigquery
+- gogol-core
+- gogol-pubsub
+- google-monad
+- lens
+- logging-truck
+- relude
+- unliftio-core
+
+library:
+  source-dirs: src

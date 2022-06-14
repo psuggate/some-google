@@ -12,18 +12,10 @@ resolver:
 #   - wai
 packages:
 - .
-- packages/google-monad
 - packages/bigquery
-# - packages/pubsub
-
-# - git: https://github.com/psuggate/logging-truck.git
-#   commit: 1520233df74b23121cea2e45c3a5e9757d46f726
-#   subdirs:
-#   - .
-#   - lib/gogol
-#   - lib/gogol-bigquery
-#   - lib/gogol-core
-#   - lib/gogol-pubsub
+- packages/google-monad
+- packages/logging-truck-google
+- packages/pubsub
 
 extra-deps:
 - git: https://github.com/brendanhay/gogol.git
@@ -33,6 +25,10 @@ extra-deps:
   - lib/gogol-core
   - lib/services/gogol-bigquery
   - lib/services/gogol-pubsub
+- git: https://github.com/psuggate/logging-truck.git
+  # commit: 6e6b9d93ec5d203babdb7ca0932fe4fda9ed70e3
+  commit: e835dd01bd67dc15a5c4c9417bcde8a78bb95bce
+- co-log-core-0.3.1.0@sha256:9794bdedd1391decd0e22bdfe2b11abcb42e6cff7a4531e1f8882890828f4e63,3816
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
