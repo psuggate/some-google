@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds, DerivingStrategies, FlexibleContexts,
-             GeneralisedNewtypeDeriving, NoImplicitPrelude, OverloadedStrings,
-             PatternSynonyms, RankNTypes, ScopedTypeVariables, TypeFamilies #-}
+{-# LANGUAGE DataKinds, DerivingStrategies, FlexibleContexts, FlexibleInstances,
+             GeneralisedNewtypeDeriving, InstanceSigs, MultiParamTypeClasses,
+             NoImplicitPrelude, OverloadedStrings, PatternSynonyms, RankNTypes,
+             ScopedTypeVariables, TypeFamilies #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -15,9 +16,10 @@
 
 module Control.Monad.Google
   (
-    Google (..)
+    Google
   , GoogleT (..)
 
+  , HasGoogle (..)
   , HasEnv (..)
   , Env
   , MonadUnliftIO
@@ -31,7 +33,7 @@ module Control.Monad.Google
   )
 where
 
-import           Control.Lens                 (lens, (.~), (<&>))
+import           Control.Lens                 (lens, view, (.~), (<&>))
 import           Control.Monad.IO.Unlift      (MonadIO, MonadUnliftIO, liftIO)
 import           Control.Monad.Reader         (MonadReader, ReaderT, runReaderT)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
@@ -44,8 +46,18 @@ import           Relude
 import           System.IO                    (stdout)
 
 
+-- * Function-families for the evaluation of Google actions
+------------------------------------------------------------------------------
+-- | Evaluate a Google action within the current monad/context.
+class HasGoogle (scopes :: [Symbol]) m where
+  google :: Google scopes a -> m a
+
+
 -- * Google monad
 ------------------------------------------------------------------------------
+type Google scopes = GoogleT (Env scopes) scopes IO
+
+{-- }
 newtype Google scopes a
   = Google { getGoogle :: ReaderT (Env scopes) (ResourceT IO) a }
   deriving newtype
@@ -56,13 +68,43 @@ newtype Google scopes a
     , MonadReader (Env scopes)
     , MonadUnliftIO
     )
+--}
 
 ------------------------------------------------------------------------------
 -- | Generalise the above monad to work with more environment-types, and over
 --   more base-monads.
 newtype GoogleT env (scopes :: [Symbol]) m a
   = GoogleT { getGoogleT :: ReaderT env (ResourceT m) a }
-  deriving newtype (Applicative, Functor, Monad, MonadReader env)
+  deriving newtype
+    ( Applicative
+    , Functor
+    , Monad
+    , MonadIO
+    , MonadReader env
+    , MonadUnliftIO
+    )
+
+
+-- * Google instances
+------------------------------------------------------------------------------
+-- | Run the Google Cloud action within an appropriately-scoped context.
+instance Google.KnownScopes scopes => HasGoogle scopes IO where
+  google :: Google scopes a -> IO a
+  google action = do
+    lgr <- Google.newLogger Google.Debug stdout
+    env <- Google.newEnv
+      <&> (Google.envLogger .~ lgr)
+      . (Google.envScopes .~ (Proxy :: Proxy scopes))
+    runGoogle env action
+
+instance Google.KnownScopes scopes => HasGoogle scopes (Google scopes) where
+  google :: Google scopes a -> Google scopes a
+  google action = ask >>= liftIO . flip runGoogle action
+
+instance (MonadIO m, Google.KnownScopes scopes) =>
+         HasGoogle scopes (GoogleT (Env scopes) scopes m) where
+  google :: Google scopes a -> GoogleT (Env scopes) scopes m a
+  google action = view environment >>= liftIO . flip runGoogle action
 
 
 -- * Google environments
@@ -108,8 +150,18 @@ runGoogle
   => Env scopes
   -> Google scopes a
   -> IO a
-runGoogle env = runResourceT . flip runReaderT env . getGoogle
+runGoogle env = runResourceT . flip runReaderT env . getGoogleT
 
+------------------------------------------------------------------------------
+-- | Run the Google Cloud action within an appropriately-scoped context.
+withGoogle
+  :: forall scopes a. Google.KnownScopes scopes
+  => Google scopes a
+  -> IO a
+withGoogle  = google
+{-# INLINE withGoogle #-}
+
+{-- }
 ------------------------------------------------------------------------------
 -- | Run the Google Cloud action within an appropriately-scoped context.
 withGoogle
@@ -122,3 +174,4 @@ withGoogle action = do
     <&> (Google.envLogger .~ lgr)
       . (Google.envScopes .~ (Proxy :: Proxy scopes))
   runGoogle env action
+--}

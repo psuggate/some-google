@@ -1,15 +1,6 @@
 resolver:
   url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/7.yaml
 
-# User packages to be built.
-# Various formats can be used as shown in the example below.
-#
-# packages:
-# - some-directory
-# - https://example.com/foo/bar/baz-0.0.2.tar.gz
-#   subdirs:
-#   - auto-update
-#   - wai
 packages:
 - .
 - packages/bigquery
@@ -26,8 +17,7 @@ extra-deps:
   - lib/services/gogol-bigquery
   - lib/services/gogol-pubsub
 - git: https://github.com/psuggate/logging-truck.git
-  # commit: 6e6b9d93ec5d203babdb7ca0932fe4fda9ed70e3
-  commit: e835dd01bd67dc15a5c4c9417bcde8a78bb95bce
+  commit: 85e6287a0afa5f696ffe7f35cd9a243cb8485f48
 - co-log-core-0.3.1.0@sha256:9794bdedd1391decd0e22bdfe2b11abcb42e6cff7a4531e1f8882890828f4e63,3816
 
 # Override default flag values for local packages and extra-deps

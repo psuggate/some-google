@@ -27,7 +27,7 @@ createTable
   -> DatasetId
   -> BigQuery.Table
   -> Google BigQueryScopes BigQuery.Table
-createTable pid did tab = Google $ do
+createTable pid did tab = GoogleT $ do
   pure undefined
 
 {-- }

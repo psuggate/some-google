@@ -1,5 +1,5 @@
 name:                google-monad
-version:             0.1.0.0
+version:             0.1.0.1
 license:             BSD3
 author:              "Patrick Suggate"
 maintainer:          "patrick.suggate@gmail.com"
@@ -21,6 +21,7 @@ dependencies:
 - mtl
 - relude
 - resourcet
+- uuid
 - unliftio-core
 
 library:

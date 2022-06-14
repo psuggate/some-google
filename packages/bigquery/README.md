@@ -1,5 +1,10 @@
 # Haskell Client for Google BiqQuery
 
+## TODO
+
++ high-level interface
++ need a decent way to obtain the Google project-id
+
 ## Setup
 
 ```bash

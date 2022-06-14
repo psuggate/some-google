@@ -1,6 +1,7 @@
-{-# LANGUAGE DeriveGeneric, DerivingStrategies, FlexibleContexts,
-             FunctionalDependencies, GeneralisedNewtypeDeriving,
-             MultiParamTypeClasses, OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies,
+             FlexibleContexts, FunctionalDependencies,
+             GeneralisedNewtypeDeriving, MultiParamTypeClasses,
+             OverloadedStrings, StandaloneDeriving #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -20,6 +21,9 @@ module Data.Google.Types
   , HasProject (..)
   , Project (..)
 
+  , PageResults (..)
+  , Insertions (..)
+
   , Base64 (..)
   , toBase64
   )
@@ -28,6 +32,7 @@ where
 import           Control.Lens         (Lens', lens, (.~), (<&>))
 import           Control.Monad.Google as Export hiding (Env)
 import           Data.Aeson           (FromJSON, ToJSON)
+import           Data.UUID            (UUID)
 import           Gogol                (Base64 (..))
 import           Relude
 
@@ -59,6 +64,51 @@ instance HasPath Project where
 
 instance HasProject Project Project where
   projectOf  = id
+
+
+-- ** Miscellaneous API helper data types
+------------------------------------------------------------------------------
+-- | Paginated results, with a next-page identifier.
+--   TODO: figure out an efficient way to get the next page of results
+data PageResults t
+  = PageResults
+      { results   :: [t]
+      , pageIndex :: Int
+      , pageSize  :: Int
+      , nextPage  :: Maybe UUID
+      }
+  deriving (Generic, NFData)
+
+deriving instance FromJSON t => FromJSON (PageResults t)
+deriving instance ToJSON   t => ToJSON (PageResults t)
+-- deriving instance FromHttpApiData t => FromHttpApiData (PageResults t)
+
+instance Functor PageResults where
+  fmap f rs = rs { results = fmap f (results rs) }
+
+instance Applicative PageResults where
+  pure x = PageResults [x] 1 1 Nothing
+  PageResults fs i s n <*> PageResults xs _ _ _ = PageResults (fs <*> xs) i s n
+
+------------------------------------------------------------------------------
+-- | This type exists so that PUT operations return JSON objects, as this is
+--   considered best-practice.
+data Insertions i
+  = Insertions
+      { appended    :: !Int
+      , identifiers :: ![i]
+      }
+  deriving (Eq, Generic, NFData, Show)
+
+deriving instance FromJSON i => FromJSON (Insertions i)
+deriving instance ToJSON   i => ToJSON (Insertions i)
+
+instance Functor Insertions where
+  fmap f (Insertions n xs) = n `Insertions` fmap f xs
+
+instance Applicative Insertions where
+  pure x = Insertions 1 [x]
+  Insertions n fs <*> Insertions _ xs = Insertions n (fs <*> xs)
 
 
 -- * Conversions

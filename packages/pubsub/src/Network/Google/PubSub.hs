@@ -89,7 +89,7 @@ getTopic
   => Project
   -> TopicName
   -> Google scopes PubSub.Topic
-getTopic proj topic = Google $ do
+getTopic proj topic = GoogleT $ do
   let treq = PubSub.newPubSubProjectsTopicsGet path
       path = pathOf proj <> "/" <> pathOf topic
   flip Google.send treq =<< ask
@@ -98,7 +98,7 @@ topicList
   :: AllowPubSubRequest scopes
   => Project
   -> Google scopes (Maybe [PubSub.Topic])
-topicList proj = Google $ do
+topicList proj = GoogleT $ do
   env <- ask
   let path = pathOf proj
   PubSub.topics <$> env `Google.send` PubSub.newPubSubProjectsTopicsList path
@@ -116,7 +116,7 @@ publish
   -> TopicName
   -> a
   -> Google PubSubScopes (Maybe [Text])
-publish proj topic payload = Google $ do
+publish proj topic payload = GoogleT $ do
   env <- ask
   let path = pathOf proj <> "/" <> pathOf topic
       mesg = toMessage . toStrict . Aeson.encode
