@@ -64,6 +64,5 @@ executable logging-truck-google-exe
     , lens
     , logging-truck
     , relude
-    , some-google
     , unliftio-core
   default-language: Haskell2010
