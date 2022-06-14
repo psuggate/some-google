@@ -7,6 +7,12 @@ module System.Logger.Google
 
   , makeLogger
   , translateSeverity
+
+  , stdoutLogger
+  , stderrLogger
+  , handleLogger
+  , googleLogger
+  , googleLogAction
   )
 where
 
@@ -15,16 +21,14 @@ import qualified Colog.Core              as Colog
 import           Control.Lens            (lens, set, (^.))
 import           Control.Monad.IO.Unlift
 import qualified Data.ByteString.Builder as B
-import           Data.Event.Status       as Export
+import           Data.Event.Status       as Export hiding (stderrLogger,
+                                                    stdoutLogger)
 import           Data.Google.Types
 import qualified Gogol                   as Google
 import qualified Gogol.Internal.Logger   as Google
 import           Relude
 import           System.IO               (hSetBinaryMode)
 import qualified System.Logger.Settings  as Logger
-
--- import           Gogol                   as Export (LogLevel (..), Logger)
--- import           Data.ByteString.Builder as B (Builder)
 
 
 -- * Instances
