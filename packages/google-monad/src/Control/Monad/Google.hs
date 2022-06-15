@@ -1,7 +1,7 @@
-{-# LANGUAGE DataKinds, DerivingStrategies, FlexibleContexts, FlexibleInstances,
-             GeneralisedNewtypeDeriving, InstanceSigs, MultiParamTypeClasses,
-             NoImplicitPrelude, OverloadedStrings, PatternSynonyms, RankNTypes,
-             ScopedTypeVariables, TypeFamilies #-}
+{-# LANGUAGE DataKinds, DeriveGeneric, DerivingStrategies, FlexibleContexts,
+             FlexibleInstances, GeneralisedNewtypeDeriving, InstanceSigs,
+             MultiParamTypeClasses, NoImplicitPrelude, OverloadedStrings,
+             PatternSynonyms, RankNTypes, ScopedTypeVariables, TypeFamilies #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -21,9 +21,10 @@ module Control.Monad.Google
 
   , HasGoogle (..)
   , HasEnv (..)
-  , Env
+  , Google.KnownScopes
   , MonadUnliftIO
 
+  , Env (..)
   , makeEnv
   , newGoogleEnv
 
@@ -57,22 +58,13 @@ class HasGoogle (scopes :: [Symbol]) m where
 ------------------------------------------------------------------------------
 type Google scopes = GoogleT (Env scopes) scopes IO
 
-{-- }
-newtype Google scopes a
-  = Google { getGoogle :: ReaderT (Env scopes) (ResourceT IO) a }
-  deriving newtype
-    ( Applicative
-    , Functor
-    , Monad
-    , MonadIO
-    , MonadReader (Env scopes)
-    , MonadUnliftIO
-    )
---}
-
 ------------------------------------------------------------------------------
 -- | Generalise the above monad to work with more environment-types, and over
 --   more base-monads.
+--
+--   TODO:
+--    + @MonadThrow@ and @MonadCatch@?
+--
 newtype GoogleT env (scopes :: [Symbol]) m a
   = GoogleT { getGoogleT :: ReaderT env (ResourceT m) a }
   deriving newtype
@@ -83,6 +75,7 @@ newtype GoogleT env (scopes :: [Symbol]) m a
     , MonadReader env
     , MonadUnliftIO
     )
+  deriving (Generic)
 
 
 -- * Google instances

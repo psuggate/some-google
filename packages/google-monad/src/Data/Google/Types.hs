@@ -17,6 +17,7 @@
 module Data.Google.Types
   (
     module Export
+
   , HasPath (..)
   , HasProject (..)
   , Project (..)
