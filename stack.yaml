@@ -17,7 +17,7 @@ extra-deps:
   - lib/services/gogol-bigquery
   - lib/services/gogol-pubsub
 - git: https://github.com/psuggate/logging-truck.git
-  commit: f5c0b132687f086b704be12605cf0ad03658446e
+  commit: 07410822fba3d30d118254f29d92ad12a12a044d
 - co-log-core-0.3.1.0@sha256:9794bdedd1391decd0e22bdfe2b11abcb42e6cff7a4531e1f8882890828f4e63,3816
 
 # Override default flag values for local packages and extra-deps

@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies,
+{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies, DerivingVia,
              FlexibleContexts, FunctionalDependencies,
              GeneralisedNewtypeDeriving, MultiParamTypeClasses,
              OverloadedStrings, StandaloneDeriving #-}
@@ -22,7 +22,10 @@ module Data.Google.Types
   , Project (..)
 
   , PageResults (..)
+  , pageResults
+
   , Insertions (..)
+  , insertions
 
   , Base64 (..)
   , toBase64
@@ -32,9 +35,10 @@ where
 import           Control.Lens         (Lens', lens, (.~), (<&>))
 import           Control.Monad.Google as Export hiding (Env)
 import           Data.Aeson           (FromJSON, ToJSON)
-import           Data.UUID            (UUID)
+import           Data.OpenApi         (ToParamSchema, ToSchema)
 import           Gogol                (Base64 (..))
 import           Relude
+import           Web.HttpApiData      (FromHttpApiData)
 
 
 -- * Convenience function-families
@@ -51,7 +55,10 @@ class HasProject t a | t -> a where
 newtype Project
   = Project { getProject :: Text }
   deriving (Eq, Generic, Show)
-  deriving newtype (FromJSON, NFData, ToJSON)
+  deriving newtype (FromHttpApiData, FromJSON, NFData, ToJSON)
+
+deriving via Text instance ToSchema Project
+deriving via Text instance ToParamSchema Project
 
 instance IsString Project where
   fromString  = Project . toText
@@ -73,21 +80,23 @@ instance HasProject Project Project where
 data PageResults t
   = PageResults
       { results   :: [t]
-      , pageIndex :: Int
-      , pageSize  :: Int
-      , nextPage  :: Maybe UUID
+      , pageIndex :: Maybe Int
+      , pageSize  :: Maybe Int
+      , nextPage  :: Maybe Text
       }
   deriving (Generic, NFData)
 
 deriving instance FromJSON t => FromJSON (PageResults t)
 deriving instance ToJSON   t => ToJSON (PageResults t)
--- deriving instance FromHttpApiData t => FromHttpApiData (PageResults t)
+
+-- instance FromHttpApiData t => FromHttpApiData (PageResults t)
+instance ToSchema t => ToSchema (PageResults t)
 
 instance Functor PageResults where
   fmap f rs = rs { results = fmap f (results rs) }
 
 instance Applicative PageResults where
-  pure x = PageResults [x] 1 1 Nothing
+  pure x = PageResults [x] Nothing Nothing Nothing
   PageResults fs i s n <*> PageResults xs _ _ _ = PageResults (fs <*> xs) i s n
 
 ------------------------------------------------------------------------------
@@ -103,12 +112,29 @@ data Insertions i
 deriving instance FromJSON i => FromJSON (Insertions i)
 deriving instance ToJSON   i => ToJSON (Insertions i)
 
+-- instance FromHttpApiData i => FromHttpApiData (Insertions i)
+instance ToSchema i => ToSchema (Insertions i)
+
 instance Functor Insertions where
   fmap f (Insertions n xs) = n `Insertions` fmap f xs
 
 instance Applicative Insertions where
   pure x = Insertions 1 [x]
   Insertions n fs <*> Insertions _ xs = Insertions n (fs <*> xs)
+
+
+-- * Helpers
+------------------------------------------------------------------------------
+insertions :: Foldable f => f i -> Insertions i
+insertions js = Insertions { appended = length js, identifiers = toList js }
+
+pageResults :: Foldable f => f t -> PageResults t
+pageResults js = PageResults
+  { results   = toList js
+  , pageIndex = Nothing
+  , pageSize  = Nothing
+  , nextPage  = Nothing
+  }
 
 
 -- * Conversions

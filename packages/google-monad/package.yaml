@@ -1,5 +1,5 @@
 name:                google-monad
-version:             0.1.0.1
+version:             0.1.0.2
 license:             BSD3
 author:              "Patrick Suggate"
 maintainer:          "patrick.suggate@gmail.com"
@@ -17,8 +17,10 @@ dependencies:
 - base >= 4.7 && < 5
 - gogol
 - gogol-core
+- http-api-data
 - lens
 - mtl
+- openapi3
 - relude
 - resourcet
 - uuid

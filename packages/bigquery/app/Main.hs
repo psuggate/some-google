@@ -1,22 +1,24 @@
-{-# LANGUAGE DataKinds, LambdaCase, NoImplicitPrelude, OverloadedStrings,
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings,
              ScopedTypeVariables #-}
 
 module Main where
 
-import           Control.Lens           (view)
-import           Control.Monad.Google   as Google
-import           Data.Google.Types
-import           Gogol                  (HasEnv (..))
-import qualified Gogol.Auth             as Google
-import           Gogol.Compute.Metadata (getProjectId)
-import           Gogol.Internal.Auth    (Credentials (..), _serviceId)
+import           Control.Lens                    (view)
+import           Control.Monad.Google            as Google
+import           Gogol                           (HasEnv (..))
+import           Gogol.Compute.Metadata          (getProjectId)
+import qualified Network.Google.BigQuery.Dataset as BQ
+import           Network.Google.BigQuery.Types   (BigQueryScopes, Project (..))
 import           Relude
 import           Text.Printf
+
+import qualified Gogol.Auth                      as Google
+import           Gogol.Internal.Auth             (Credentials (..), _serviceId)
 
 
 ------------------------------------------------------------------------------
 -- | Try to find a suitable @Project@ name/id
-googleProjectId :: Google '[] Project
+googleProjectId :: Google BigQueryScopes Project
 googleProjectId  = do
   liftIO (lookupEnv "GCLOUD_PROJECT") >>= \case
     Just pr -> pure $ Project $ fromString pr
@@ -47,5 +49,7 @@ main :: IO ()
 main  = do
   withGoogle $ do
     showCreds
-    liftIO . print =<< googleProjectId
+    proj <- googleProjectId
+    liftIO . putStrLn $ printf "Project: %s" (coerce proj :: Text)
+    liftIO . mapM_ print =<< BQ.glist proj
   putTextLn "todo ..."
