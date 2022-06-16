@@ -80,7 +80,7 @@ instance HasProject Project Project where
 --   TODO: figure out an efficient way to get the next page of results
 data PageResults t
   = PageResults
-      { results   :: [t]
+      { itemsList :: [t]
       , pageIndex :: Maybe Int
       , pageSize  :: Maybe Int
       , nextPage  :: Maybe Text
@@ -94,7 +94,7 @@ deriving instance ToJSON   t => ToJSON (PageResults t)
 instance ToSchema t => ToSchema (PageResults t)
 
 instance Functor PageResults where
-  fmap f rs = rs { results = fmap f (results rs) }
+  fmap f rs = rs { itemsList = fmap f (itemsList rs) }
 
 instance Applicative PageResults where
   pure x = PageResults [x] Nothing Nothing Nothing
@@ -131,7 +131,7 @@ insertions js = Insertions { appended = length js, identifiers = toList js }
 
 pageResults :: Foldable f => f t -> PageResults t
 pageResults js = PageResults
-  { results   = toList js
+  { itemsList = toList js
   , pageIndex = Nothing
   , pageSize  = Nothing
   , nextPage  = Nothing

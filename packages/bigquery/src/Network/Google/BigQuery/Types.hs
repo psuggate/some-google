@@ -10,7 +10,9 @@ module Network.Google.BigQuery.Types
 where
 
 import           Data.Aeson        as Aeson
-import           Data.Google.Types as Export (Project (..))
+import           Data.Google.Types as Export (Insertions (..), PageResults (..),
+                                              Project (..), insertions,
+                                              pageResults)
 import qualified Data.List         as List
 import qualified Gogol.Auth.Scope  as Google
 import qualified Gogol.BigQuery    as BigQuery
