@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           bigquery
-version:        0.1.0.2
+version:        0.1.0.3
 synopsis:       Short description of your package
 description:    Please see the README on GitHub at <https://github.com/githubabuser/google-cloud#readme>
 category:       Web

@@ -4,8 +4,20 @@
 
 module Network.Google.BigQuery.Types
   (
-    module Network.Google.BigQuery.Types
-  , module Export
+    module Export
+  , AllowBigQueryRequest
+  , BigQueryScopes
+
+  , DatasetId (..)
+  , Dataset (..)
+
+  , TableId (..)
+  , Table (..)
+
+  , Schema (..)
+  , Field (..)
+  , FieldMode (..)
+  , FieldType (..)
   )
 where
 
