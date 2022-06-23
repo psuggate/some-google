@@ -1,10 +1,24 @@
 {-# LANGUAGE ConstraintKinds, DataKinds, DeriveAnyClass, DeriveGeneric,
-             DerivingStrategies, GADTs, GeneralisedNewtypeDeriving,
-             NoImplicitPrelude, OverloadedStrings, StandaloneDeriving #-}
+             DerivingStrategies, DerivingVia, GADTs,
+             GeneralisedNewtypeDeriving, MultiParamTypeClasses,
+             NoImplicitPrelude, OverloadedStrings, StandaloneDeriving,
+             TypeFamilies #-}
+
+------------------------------------------------------------------------------
+-- |
+-- Module      : Network.Google.BigQuery.Types
+-- Copyright   : (c) 2022 Patrick Suggate
+-- License     : Mozilla Public License, v. 2.0.
+-- Maintainer  : Patrick Suggate <patrick.suggate@gmail.com>
+-- Stability   : provisional
+-- Portability : non-portable (GHC extensions)
+--
+------------------------------------------------------------------------------
 
 module Network.Google.BigQuery.Types
   (
     module Export
+
   , AllowBigQueryRequest
   , BigQueryScopes
 
@@ -21,15 +35,16 @@ module Network.Google.BigQuery.Types
   )
 where
 
+import           Control.Lens      (lens)
 import           Data.Aeson        as Aeson
-import           Data.Google.Types as Export (Insertions (..), PageResults (..),
-                                              Project (..), insertions,
-                                              pageResults)
+import           Data.Google.Types as Export (GHasId (..), Insertions (..),
+                                              PageResults (..), Project (..),
+                                              insertions, pageResults)
 import qualified Data.List         as List
 import qualified Gogol.Auth.Scope  as Google
 import qualified Gogol.BigQuery    as BigQuery
 import           Relude
-import           Web.HttpApiData   (FromHttpApiData)
+import           Web.HttpApiData   (FromHttpApiData (..))
 
 
 -- * Type constraints
@@ -58,17 +73,22 @@ instance IsString DatasetId where fromString = DatasetId . toText
 
 data Dataset
   = Dataset
-      { dataset'name     :: Maybe Text
-      , dataset'id       :: DatasetId
-      , dataset'tables   :: [Table]
-      , dataset'location :: Maybe Text
+      { dataset'id       :: DatasetId
       , dataset'project  :: Project
+      , dataset'name     :: Maybe Text
+      , dataset'location :: Maybe Text
+      , dataset'tables   :: Maybe [Table]
       }
   deriving (Eq, Generic, NFData, Show)
 
 instance FromJSON Dataset where parseJSON = genericParseJSON jsonOpts'
 instance ToJSON   Dataset where toJSON = genericToJSON jsonOpts'
 
+instance GHasId Dataset DatasetId where
+  guid = lens dataset'id $ \r s -> r { dataset'id = s }
+
+
+-- ** Table data-types
 ------------------------------------------------------------------------------
 newtype TableId
   = TableId { getTableId :: Text }
@@ -77,13 +97,48 @@ newtype TableId
 
 data Table
   = Table
-      { table'id     :: TableId
-      , table'schema :: Schema
+      { table'id        :: TableId
+      , table'name      :: Maybe Text
+      , table'schema    :: Schema
+      , table'partition :: Maybe Partitioning
+      , table'type      :: Maybe TableType
       }
   deriving (Eq, Generic, NFData, Show)
 
 instance FromJSON Table where parseJSON = genericParseJSON jsonOpts'
 instance ToJSON   Table where toJSON = genericToJSON jsonOpts'
+
+instance GHasId Table TableId where
+  guid = lens table'id $ \r s -> r { table'id = s }
+
+------------------------------------------------------------------------------
+data Partitioning
+  = DAY
+  | HOUR
+  | MONTH
+  | YEAR
+  deriving (Eq, Generic, NFData, Read, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance FromHttpApiData Partitioning where
+  parseUrlPiece "DAY"   = Right DAY
+  parseUrlPiece "HOUR"  = Right HOUR
+  parseUrlPiece "MONTH" = Right MONTH
+  parseUrlPiece "YEAR"  = Right YEAR
+  parseUrlPiece _       = Left "Invalid partitioning time-period"
+
+------------------------------------------------------------------------------
+data TableType
+  = TABLE
+  | VIEW
+  | SNAPSHOT
+  | MATERIALIZED_VIEW
+  | EXTERNAL
+  deriving (Eq, Generic, NFData, Read, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance FromHttpApiData TableType where
+  parseUrlPiece = readEither . toString
 
 
 -- ** Schema definition data types

@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies, DerivingVia,
-             FlexibleContexts, FunctionalDependencies,
+{-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, DerivingStrategies,
+             DerivingVia, FlexibleContexts, FunctionalDependencies,
              GeneralisedNewtypeDeriving, MultiParamTypeClasses,
-             OverloadedStrings, StandaloneDeriving #-}
+             OverloadedStrings, PolyKinds, StandaloneDeriving, TypeFamilies,
+             TypeFamilyDependencies #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -17,6 +18,10 @@
 module Data.Google.Types
   (
     module Export
+
+  , GAPI (..)
+  , GHasId (..)
+  , GHasRef (..)
 
   , HasPath (..)
   , HasProject (..)
@@ -37,6 +42,7 @@ import           Control.Lens         (Lens', lens, (.~), (<&>))
 import           Control.Monad.Google as Export hiding (Env)
 import           Data.Aeson           (FromJSON, ToJSON)
 import           Data.OpenApi         (ToParamSchema, ToSchema)
+import           GHC.TypeLits
 import           Gogol                (Base64 (..))
 import           Relude
 import           Web.HttpApiData      (FromHttpApiData)
@@ -50,6 +56,22 @@ class HasPath t where
 class HasProject t a | t -> a where
   projectOf :: Lens' t a
 
+------------------------------------------------------------------------------
+-- | General class of functions for the Google API.
+class GAPI t i | t -> i, i -> t where
+  type ScopesFor t :: [Symbol]
+  type ExtraArgs t :: Type
+  ginsert :: Project -> ExtraArgs t -> t -> Google (ScopesFor t) i
+  glookup :: Project -> ExtraArgs t -> i -> Google (ScopesFor t) t
+  glist   :: Project -> ExtraArgs t      -> Google (ScopesFor t) [i]
+  gdelete :: Project -> ExtraArgs t -> i -> Google (ScopesFor t) ()
+
+class GHasId t i | t -> i where
+  guid :: Lens' t i
+
+class GHasRef t i | t -> i where
+  gref :: Lens' t i
+
 
 -- * Core Google Cloud Platform (GCP) data types
 ------------------------------------------------------------------------------
@@ -61,23 +83,21 @@ newtype Project
 deriving via Text instance ToSchema Project
 deriving via Text instance ToParamSchema Project
 
-instance IsString Project where
-  fromString  = Project . toText
-
-instance ToText Project where
-  toText  = getProject
-
-instance HasPath Project where
-  pathOf  = mappend "projects/" . getProject
-
-instance HasProject Project Project where
-  projectOf  = id
+instance IsString Project where fromString  = Project . toText
+instance ToText Project where toText  = getProject
+instance HasPath Project where pathOf  = mappend "projects/" . getProject
+instance HasProject Project Project where projectOf  = id
 
 
 -- ** Miscellaneous API helper data types
 ------------------------------------------------------------------------------
 -- | Paginated results, with a next-page identifier.
---   TODO: figure out an efficient way to get the next page of results
+--
+--   TODO:
+--    + figure out an efficient way to get the next page of results
+--    + the Google API calls return a 'pageToken', so I need to use this (and
+--      cache via Redis)?
+--
 data PageResults t
   = PageResults
       { itemsList :: [t]
@@ -94,7 +114,7 @@ deriving instance ToJSON   t => ToJSON (PageResults t)
 instance ToSchema t => ToSchema (PageResults t)
 
 instance Functor PageResults where
-  fmap f rs = rs { itemsList = fmap f (itemsList rs) }
+  fmap f rs = rs { itemsList = f <$> itemsList rs }
 
 instance Applicative PageResults where
   pure x = PageResults [x] Nothing Nothing Nothing
