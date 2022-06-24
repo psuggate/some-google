@@ -4,19 +4,26 @@
 
 module Main where
 
-import           Control.Lens                    (lens, makeLenses, view, (^.))
+import           Control.Lens                    (lens, makeLenses, view, (.~),
+                                                  (^.))
 import           Control.Monad.Google            as Google
 import           Gogol                           (HasEnv (..))
 import           Gogol.Compute.Metadata          (getProjectId)
 import qualified Network.Google.BigQuery.Dataset as BQ
+import qualified Network.Google.BigQuery.Job     as BQ
 import qualified Network.Google.BigQuery.Table   as BQ
-import           Network.Google.BigQuery.Types   (BigQueryScopes, Project (..))
+import           Network.Google.BigQuery.Types   (BigQueryScopes,
+                                                  DatasetId (..), Project (..),
+                                                  Table, TableId (..))
 import           Options.Applicative
 import           Relude
 import           Text.Printf
 
 import qualified Gogol.Auth                      as Google
 import           Gogol.Internal.Auth             (Credentials (..), _serviceId)
+
+import qualified Data.Yaml                       as YAML
+import qualified Data.Yaml.Pretty                as YAML
 
 
 -- * Data types
@@ -40,24 +47,24 @@ instance BQ.HasProject Opts Project where
 ------------------------------------------------------------------------------
 parser :: Parser Opts
 parser  = Opts
-  <$> option auto (short 'p' <> long "project" <> metavar "PROJECT" <>
-                   value "bigquery-public-data" <>
-                   help "Google Cloud project name" <> showDefault)
-  <*> option auto (short 'd' <> long "dataset" <> metavar "DATASET-ID" <>
-                   value "covid19_open_data" <> help "Dataset to query run" <>
-                   showDefault)
-  <*> option auto (short 't' <> long "table" <> metavar "TABLE-ID" <>
-                   value "covid19_open_data" <>
-                   help "Table identifier for query" <> showDefault)
-  <*> switch      (short 'v' <> long "verbose" <> help "Extra debug output")
+  <$> option str (short 'p' <> long "project" <> metavar "PROJECT" <>
+                  value "bigquery-public-data" <>
+                  help "Google Cloud project name" <> showDefault)
+  <*> option str (short 'd' <> long "dataset" <> metavar "DATASET-ID" <>
+                  value "covid19_open_data" <> help "Dataset to query run" <>
+                  showDefault)
+  <*> option str (short 't' <> long "table" <> metavar "TABLE-ID" <>
+                  value "covid19_open_data" <>
+                  help "Table identifier for query" <> showDefault)
+  <*> switch     (short 'v' <> long "verbose" <> help "Extra debug output")
 
 ------------------------------------------------------------------------------
 -- | Try to find a suitable @Project@ name/id
-googleProjectId :: Opts -> Google BigQueryScopes Project
+googleProjectId :: Opts -> Google BigQueryScopes Opts
 googleProjectId opts = do
   liftIO (lookupEnv "GCLOUD_PROJECT") >>= \case
-    Just pr -> pure $ Project $ fromString pr
-    Nothing -> pure $ opts ^. BQ.projectOf
+    Just pr -> pure $ opts & BQ.projectOf .~ Project (fromString pr)
+    Nothing -> pure opts
 {-- }
     Nothing -> do
       man <- view envManager
@@ -80,19 +87,36 @@ showCreds  = do
     FromUser _       -> putTextLn "FromUser"
     FromTokenFile fp -> putStrLn $ printf "Token file: %s" fp
 
+------------------------------------------------------------------------------
+-- | Fetch information for the indicated table.
+dumpTable :: Opts -> Google BigQueryScopes Table
+dumpTable opts = do
+  let prj = opts^.BQ.projectOf
+      did = DatasetId $ opts^.dataset
+      tid = TableId $ opts^.tableId
+  tabl <- BQ.lookupTable prj did tid
+  when (opts^.verbose) $ do
+    let ycfg = YAML.setConfCompare compare YAML.defConfig
+    putTextLn . decodeUtf8 $ YAML.encodePretty ycfg tabl
+    putTextLn . decodeUtf8 $ YAML.encodePretty ycfg $ BQ.fromTable prj did tabl
+  pure tabl
+
 
 -- * Main entry-point
 ------------------------------------------------------------------------------
 main :: IO ()
 main  = do
-  let opts = info parser mempty
-  args <- execParser opts
+  let optsParser = info parser mempty
+  args <- execParser optsParser
   print args
 
-  withGoogle $ do
+  _ <- withGoogle $ do
     showCreds
-    proj <- googleProjectId args
+    opts <- googleProjectId args
+    let proj = opts ^. BQ.projectOf
     liftIO . putStrLn $ printf "Project: %s" (coerce proj :: Text)
     liftIO . mapM_ print =<< BQ.listDatasets proj
-    liftIO . mapM_ print =<< BQ.listTables proj (BQ.DatasetId $ args ^. dataset)
+    liftIO . mapM_ print =<< BQ.listTables proj (BQ.DatasetId $ opts ^. dataset)
+    dumpTable opts
+    liftIO . mapM_ print =<< BQ.listJobs proj
   putTextLn "todo ..."

@@ -145,12 +145,10 @@ instance FromHttpApiData TableType where
 ------------------------------------------------------------------------------
 -- | Schema-definition data type, that supports just a (strict) subset of the
 --   BigQuery Schema functionality.
-data Schema
-  = Schema
-      { schema'name   :: Text
-      , schema'fields :: [Field]
-      }
-  deriving (Eq, Generic, NFData, Show)
+newtype Schema
+  = Schema { schema'fields :: [Field] }
+  deriving (Eq, Generic, Show)
+  deriving anyclass (NFData)
 
 -- TODO: parse via the `gogol-bigquery` data type, and then extract the
 --   desired fields?
@@ -185,16 +183,21 @@ data FieldMode
   = NULLABLE
   | REQUIRED
   | REPEATED
-  deriving (Enum, Eq, Generic, NFData, Ord, Show)
+  deriving (Enum, Eq, Generic, NFData, Ord, Read, Show)
 
 deriving instance FromJSON FieldMode
 deriving instance ToJSON   FieldMode
+
+instance FromHttpApiData FieldMode where
+  parseUrlPiece = readEither . toString
 
 ------------------------------------------------------------------------------
 -- | Name of the (SQL) data type for data that is stored within the cells of
 --   the corresponding column.
 data FieldType
-  = INT64
+  = INTEGER
+  | FLOAT
+  | INT64
   | FLOAT64
   | NUMERIC
   | BOOL
@@ -206,10 +209,14 @@ data FieldType
   | TIMESTAMP
   | STRUCT
   | RECORD
-  deriving (Enum, Eq, Generic, NFData, Ord, Show)
+  | GEOGRAPHY
+  deriving (Enum, Eq, Generic, NFData, Ord, Read, Show)
 
 deriving instance FromJSON FieldType
 deriving instance ToJSON   FieldType
+
+instance FromHttpApiData FieldType where
+  parseUrlPiece = readEither . toString
 
 
 -- * Lenses & instances

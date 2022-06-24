@@ -1,5 +1,5 @@
-{-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, DuplicateRecordFields,
-             FlexibleContexts, FlexibleInstances, InstanceSigs,
+{-# LANGUAGE DeriveGeneric, DuplicateRecordFields, FlexibleContexts,
+             FlexibleInstances, GeneralisedNewtypeDeriving, InstanceSigs,
              MultiParamTypeClasses, NamedFieldPuns, NoImplicitPrelude,
              RecordWildCards, TypeFamilies #-}
 
@@ -7,14 +7,15 @@ module Network.Google.BigQuery.Job
   (
     module Export
 
-  , Job (..)
+  , BQ.Job (..)
   , JobId (..)
 
-  , insert
-  , lookup
-  , list
-  , cancel
-  , delete
+  , insertJob
+  , lookupJob
+  , listJobs
+  , cancelJob
+  , deleteJob
+
   , create
   , results
   , query
@@ -23,22 +24,34 @@ where
 
 import           Control.Lens                  (Lens', lens, over, set, view,
                                                 (?~), (^.))
-import           Control.Monad.Google
+import           Control.Monad.Google          as Export
 import           Data.Aeson                    as Aeson (FromJSON)
 import           Data.Google.Types             as Export
+import qualified Gogol                         as Google
+import qualified Gogol.Auth                    as Google
+import qualified Gogol.Auth.Scope              as Google
 import qualified Gogol.BigQuery                as BQ
-import           Network.Google.BigQuery.Types
+import           Network.Google.BigQuery.Types as Export
 import           Relude
 
 
 -- * Data types for BigQuery jobs
 ------------------------------------------------------------------------------
+type Job = BQ.Job
+
+{-- }
 data Job
   = Job
+    { job'
   deriving (Eq, Generic, NFData, Show)
+--}
 
 newtype JobId
   = JobId { getJobId :: Text }
+  deriving (Eq, Generic, NFData, Show)
+
+newtype Location
+  = Location { getLocation :: Text }
   deriving (Eq, Generic, NFData, Show)
 
 
@@ -46,18 +59,26 @@ newtype JobId
 ------------------------------------------------------------------------------
 instance GAPI Job JobId where
   type ScopesFor Job = BigQueryScopes
-  type ExtraArgs Job = TableId
+  type ExtraArgs Job = Maybe Location
 
-  ginsert :: Project -> TableId -> Job -> Google BigQueryScopes JobId
+  ginsert :: Project -> Maybe Location -> Job -> Google BigQueryScopes JobId
   ginsert _ _ _ = pure undefined
 
-  glookup :: Project -> TableId -> JobId -> Google BigQueryScopes Job
-  glookup _ _ _ = pure undefined
+  glookup :: Project -> Maybe Location -> JobId -> Google BigQueryScopes Job
+  glookup prj loc jid = GoogleT $ do
+    let cmd = (BQ.newBigQueryJobsGet (coerce jid) (coerce prj))
+          { BQ.location = coerce <$> loc } :: BQ.BigQueryJobsGet
+    view environment >>= flip Google.send cmd
 
-  glist :: Project -> TableId -> Google BigQueryScopes [JobId]
-  glist _ _ = pure []
+  glist :: Project -> Maybe Location -> Google BigQueryScopes [JobId]
+  glist prj _ = GoogleT $ do
+    let cmd = BQ.newBigQueryJobsList (coerce prj)
+        res :: BQ.JobList -> [BQ.JobReference]
+        res  = maybe [] (catMaybes . map (^.gref)) . BQ.jobs
+    view environment >>=
+      (catMaybes . map (^.guid) . res <$>) . flip Google.send cmd
 
-  gdelete :: Project -> TableId -> JobId -> Google BigQueryScopes ()
+  gdelete :: Project -> Maybe Location -> JobId -> Google BigQueryScopes ()
   gdelete _ _ _ = pure ()
 
 ------------------------------------------------------------------------------
@@ -74,8 +95,7 @@ instance GHasId BQ.JobReference (Maybe JobId) where
   guid  = lens g s
     where
       g BQ.JobReference{..} = fmap JobId jobId
-      s (BQ.JobReference md mp _) =
-        BQ.JobReference md mp <<< fmap getJobId
+      s x y = x { BQ.jobId = fmap getJobId y } :: BQ.JobReference
 
 instance GHasId BQ.JobList_JobsItem (Maybe JobId) where
   guid :: Lens' BQ.JobList_JobsItem (Maybe JobId)
@@ -85,46 +105,26 @@ instance GHasId BQ.JobList_JobsItem (Maybe JobId) where
 -- * API for BigQuery jobs
 ------------------------------------------------------------------------------
 -- | Row-insertion job.
-insert
-  :: HasEnv BigQueryScopes e
-  => MonadUnliftIO m
-  => Job
-  -> GoogleT e BigQueryScopes m JobId
-insert _ = pure undefined
+insertJob :: Project -> Job -> Google BigQueryScopes JobId
+insertJob prj job = ginsert prj Nothing job
 
 ------------------------------------------------------------------------------
 -- | Lookup up status of an existing job.
-lookup
-  :: HasEnv BigQueryScopes e
-  => MonadUnliftIO m
-  => JobId
-  -> GoogleT e BigQueryScopes m (Maybe Job)
-lookup _ = pure Nothing
+lookupJob :: Project -> Maybe Location -> JobId -> Google BigQueryScopes Job
+lookupJob  = glookup
 
 -- | List all known jobs.
-list
-  :: HasEnv BigQueryScopes e
-  => MonadUnliftIO m
-  => JobId
-  -> GoogleT e BigQueryScopes m [Job]
-list _ = pure []
+listJobs :: Project -> Google BigQueryScopes [JobId]
+listJobs prj = glist prj Nothing
 
 ------------------------------------------------------------------------------
 -- | Cancel an existing job.
-cancel
-  :: HasEnv BigQueryScopes e
-  => MonadUnliftIO m
-  => JobId
-  -> GoogleT e BigQueryScopes m ()
-cancel _ = pure undefined
+cancelJob :: Project -> Maybe Location -> JobId -> Google BigQueryScopes ()
+cancelJob _ _ _ = pure ()
 
 -- | Delete an existing job.
-delete
-  :: HasEnv BigQueryScopes e
-  => MonadUnliftIO m
-  => JobId
-  -> GoogleT e BigQueryScopes m ()
-delete _ = pure undefined
+deleteJob :: Project -> Maybe Location -> JobId -> Google BigQueryScopes ()
+deleteJob  = gdelete
 
 
 -- ** Query existing datasets

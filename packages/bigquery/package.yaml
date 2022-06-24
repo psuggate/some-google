@@ -1,5 +1,5 @@
 name:                bigquery
-version:             0.1.0.5
+version:             0.1.0.6
 license:             BSD3
 author:              "Patrick Suggate"
 maintainer:          "patrick.suggate@gmail.com"
@@ -41,6 +41,7 @@ executables:
     dependencies:
     - bigquery
     - optparse-applicative
+    - yaml
 
 tests:
   bigquery-test:

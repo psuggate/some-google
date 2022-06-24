@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields, FlexibleInstances, InstanceSigs,
              MultiParamTypeClasses, NamedFieldPuns, NoImplicitPrelude,
-             OverloadedStrings, RecordWildCards, TypeFamilies #-}
+             OverloadedStrings, RecordWildCards, TypeApplications,
+             TypeFamilies #-}
 
 module Network.Google.BigQuery.Table
   (
@@ -9,6 +10,8 @@ module Network.Google.BigQuery.Table
   , createTable
   , lookupTable
   , listTables
+
+  , fromTable
   )
 where
 
@@ -16,14 +19,13 @@ import           Control.Lens                  (Lens', lens, over, set, view,
                                                 (?~), (^.))
 import           Control.Monad.Google          as Export
 import           Data.Google.Types             as Export
-import           GHC.TypeLits
-import           Gogol                         (Env, HasEnv (..))
 import qualified Gogol                         as Google
 import qualified Gogol.Auth                    as Google
 import qualified Gogol.Auth.Scope              as Google
 import qualified Gogol.BigQuery                as BQ
 import           Network.Google.BigQuery.Types as Export
 import           Relude                        hiding (set)
+import           Text.Printf
 
 import           Data.Maybe                    (fromJust)
 
@@ -41,7 +43,9 @@ instance GAPI Table TableId where
     view environment >>= fmap (fromJust . (^.guid)) . flip Google.send cmd
 
   glookup :: Project -> DatasetId -> TableId -> Google BigQueryScopes Table
-  glookup _ _ _ = pure undefined
+  glookup prj did tid = GoogleT $ do
+    let cmd = BQ.newBigQueryTablesGet (coerce did) (coerce prj) (coerce tid)
+    view environment >>= fmap toTable . flip Google.send cmd
 
   glist :: Project -> DatasetId -> Google BigQueryScopes [TableId]
   glist prj did = GoogleT $ do
@@ -108,6 +112,7 @@ fromTable :: Project -> DatasetId -> Table -> BQ.Table
 fromTable prj did Table{..} = BQ.newTable
   { BQ.tableReference = Just ref
   , BQ.friendlyName = table'name
+  , BQ.schema = Just $ fromSchema table'schema
   , BQ.timePartitioning = Just prt
   , BQ.type' = show <$> table'type
   }
@@ -116,3 +121,62 @@ fromTable prj did Table{..} = BQ.newTable
     ref = BQ.TableReference (Just (coerce did)) (Just (coerce prj)) (Just tid)
     prt = BQ.newTimePartitioning
       { BQ.type' = show <$> table'partition } :: BQ.TimePartitioning
+
+toTable :: BQ.Table -> Table
+toTable BQ.Table{..} = Table
+  { table'id = fromJust $ tableReference >>= (^.guid)
+  , table'name = friendlyName
+  , table'schema = maybe (error "missing schema") toSchema schema
+  , table'partition = prt
+  , table'type = readMaybe . toString =<< type'
+  }
+  where
+    typ = BQ.type' :: BQ.TimePartitioning -> Maybe Text
+    prt = timePartitioning >>= typ >>= readMaybe . toString
+
+------------------------------------------------------------------------------
+toSchema :: BQ.TableSchema -> Schema
+toSchema BQ.TableSchema{..} = Schema $ case fields of
+  Nothing -> []
+  Just fs -> toFields fs
+  where
+    typE =
+      let disp = printf "invalid field 'type' value: '%s'" :: Text -> String
+      in  error . fromString . disp . show
+    toFields (BQ.TableFieldSchema{..}:rs) = Field
+      { field'name = fromJust name
+      , field'mode = readMaybe . toString =<< mode
+      , field'type = fromMaybe (typE $ fromJust type') $ readMaybe . toString =<< type'
+      , field'fields = toFields <$> fields
+      }:toFields rs
+    toFields [] = []
+
+fromSchema :: Schema -> BQ.TableSchema
+fromSchema  = BQ.TableSchema . Just . map fromFields . schema'fields
+  where
+    mkField :: Text -> Maybe FieldMode -> FieldType -> BQ.TableFieldSchema
+    mkField n m t = BQ.newTableFieldSchema
+      { BQ.name  = Just n
+      , BQ.mode  = show <$> m
+      , BQ.type' = Just $ show t
+      }
+
+    fromFields :: Field -> BQ.TableFieldSchema
+    fromFields (Field n m t Nothing) = case t of
+      STRUCT    -> errT t
+      RECORD    -> errT t
+      GEOGRAPHY -> err "unsupported field-type: %s" (show t)
+      _         -> mkField n m t
+      where
+        errT = err "field of '%s' type should have subfields" . show
+    fromFields (Field n m t fs) = case t of
+      RECORD -> subFields n m fs
+      STRUCT -> subFields n m fs
+      _ -> err "field 'type' (%s) should not have subfields" (show t :: Text)
+
+    subFields :: Text -> Maybe FieldMode -> Maybe [Field] -> BQ.TableFieldSchema
+    subFields n m fs = (mkField n m RECORD) { BQ.fields = map fromFields <$> fs }
+
+------------------------------------------------------------------------------
+err :: String -> Text -> a
+err msg = error . fromString . printf msg
