@@ -163,10 +163,10 @@ fromSchema  = BQ.TableSchema . Just . map fromFields . schema'fields
 
     fromFields :: Field -> BQ.TableFieldSchema
     fromFields (Field n m t Nothing) = case t of
-      STRUCT    -> errT t
-      RECORD    -> errT t
-      GEOGRAPHY -> err "unsupported field-type: %s" (show t)
-      _         -> mkField n m t
+      STRUCT -> errT t
+      RECORD -> errT t
+      -- GEOGRAPHY -> err "unsupported field-type: %s" (show t)
+      _      -> mkField n m t
       where
         errT = err "field of '%s' type should have subfields" . show
     fromFields (Field n m t fs) = case t of

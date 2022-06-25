@@ -4,26 +4,30 @@
 
 module Main where
 
-import           Control.Lens                    (lens, makeLenses, view, (.~),
-                                                  (^.))
-import           Control.Monad.Google            as Google
-import           Gogol                           (HasEnv (..))
-import           Gogol.Compute.Metadata          (getProjectId)
-import qualified Network.Google.BigQuery.Dataset as BQ
-import qualified Network.Google.BigQuery.Job     as BQ
-import qualified Network.Google.BigQuery.Table   as BQ
-import           Network.Google.BigQuery.Types   (BigQueryScopes,
-                                                  DatasetId (..), Project (..),
-                                                  Table, TableId (..))
+import           Control.Lens                      (lens, makeLenses, view,
+                                                    (.~), (^.))
+import           Control.Monad.Google              as Google
+import           Gogol                             (HasEnv (..))
+import           Gogol.Compute.Metadata            (getProjectId)
+import qualified Network.Google.BigQuery.Dataset   as BQ
+import qualified Network.Google.BigQuery.Job       as BQ
+import qualified Network.Google.BigQuery.Table     as BQ
+import qualified Network.Google.BigQuery.Tabledata as BQ
+import           Network.Google.BigQuery.Types     (BigQueryScopes,
+                                                    DatasetId (..),
+                                                    Project (..), Table,
+                                                    TableId (..))
 import           Options.Applicative
 import           Relude
 import           Text.Printf
 
-import qualified Gogol.Auth                      as Google
-import           Gogol.Internal.Auth             (Credentials (..), _serviceId)
+import qualified Gogol.Auth                        as Google
+import           Gogol.Internal.Auth               (Credentials (..),
+                                                    _serviceId)
 
-import qualified Data.Yaml                       as YAML
-import qualified Data.Yaml.Pretty                as YAML
+import qualified Data.Aeson                        as Aeson
+import qualified Data.Yaml                         as YAML
+import qualified Data.Yaml.Pretty                  as YAML
 
 
 -- * Data types
@@ -101,6 +105,11 @@ dumpTable opts = do
     putTextLn . decodeUtf8 $ YAML.encodePretty ycfg $ BQ.fromTable prj did tabl
   pure tabl
 
+disp :: Aeson.ToJSON a => a -> IO ()
+disp  = putTextLn . decodeUtf8 . YAML.encodePretty ycfg
+  where
+    ycfg = YAML.setConfCompare compare YAML.defConfig
+
 
 -- * Main entry-point
 ------------------------------------------------------------------------------
@@ -114,9 +123,12 @@ main  = do
     showCreds
     opts <- googleProjectId args
     let proj = opts ^. BQ.projectOf
+        did  = BQ.DatasetId $ opts ^. dataset
+        tid  = BQ.TableId $ opts ^. tableId
     liftIO . putStrLn $ printf "Project: %s" (coerce proj :: Text)
     liftIO . mapM_ print =<< BQ.listDatasets proj
-    liftIO . mapM_ print =<< BQ.listTables proj (BQ.DatasetId $ opts ^. dataset)
+    liftIO . mapM_ print =<< BQ.listTables proj did
     dumpTable opts
     liftIO . mapM_ print =<< BQ.listJobs proj
+    liftIO . mapM_ (disp :: Aeson.Value -> IO ()) =<< BQ.list proj did tid (Just 10)
   putTextLn "todo ..."

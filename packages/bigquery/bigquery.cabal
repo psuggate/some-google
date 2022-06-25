@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           bigquery
-version:        0.1.0.6
+version:        0.1.0.7
 synopsis:       Short description of your package
 description:    Please see the README on GitHub at <https://github.com/githubabuser/google-cloud#readme>
 category:       Web
@@ -22,6 +22,8 @@ library
       Network.Google.BigQuery
       Network.Google.BigQuery.Dataset
       Network.Google.BigQuery.Job
+      Network.Google.BigQuery.Job.Query
+      Network.Google.BigQuery.Job.Types
       Network.Google.BigQuery.Table
       Network.Google.BigQuery.Tabledata
       Network.Google.BigQuery.Types
@@ -29,6 +31,7 @@ library
       Paths_bigquery
   hs-source-dirs:
       src
+  ghc-options: -Wall
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -51,7 +54,7 @@ executable bigquery-exe
       Paths_bigquery
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -79,7 +82,7 @@ test-suite bigquery-test
       Paths_bigquery
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , base >=4.7 && <5

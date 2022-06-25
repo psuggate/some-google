@@ -1,5 +1,5 @@
 name:                bigquery
-version:             0.1.0.6
+version:             0.1.0.7
 license:             BSD3
 author:              "Patrick Suggate"
 maintainer:          "patrick.suggate@gmail.com"
@@ -11,6 +11,9 @@ extra-source-files:
 synopsis:            Short description of your package
 category:            Web
 description:         Please see the README on GitHub at <https://github.com/githubabuser/google-cloud#readme>
+
+ghc-options:
+- -Wall
 
 dependencies:
 - aeson

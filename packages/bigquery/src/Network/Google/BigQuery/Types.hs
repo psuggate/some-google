@@ -32,6 +32,9 @@ module Network.Google.BigQuery.Types
   , Field (..)
   , FieldMode (..)
   , FieldType (..)
+
+  , jsonObject'
+  , jsonObject
   )
 where
 
@@ -230,3 +233,11 @@ jsonOpts'  = defaultOptions
   { omitNothingFields = True
   , fieldLabelModifier = List.tail . List.dropWhile (/= '\'')
   }
+
+------------------------------------------------------------------------------
+-- | Convert the give value into Gogol's bizarre @JsonObject@ value.
+jsonObject' :: (FromJSON a, ToJSON a) => a -> BigQuery.JsonObject
+jsonObject' = fromMaybe (error "cannot JSON-serialise object") . jsonObject
+
+jsonObject :: (FromJSON a, ToJSON a) => a -> Maybe BigQuery.JsonObject
+jsonObject  = fmap BigQuery.JsonObject . Aeson.decode . Aeson.encode

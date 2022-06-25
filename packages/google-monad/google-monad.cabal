@@ -26,6 +26,7 @@ library
       Paths_google_monad
   hs-source-dirs:
       src
+  ghc-options: -Wall
   build-depends:
       aeson
     , base >=4.7 && <5
