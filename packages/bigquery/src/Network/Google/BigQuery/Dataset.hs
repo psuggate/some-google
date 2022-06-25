@@ -140,9 +140,9 @@ toDataset BQ.Dataset{datasetReference, friendlyName, location} = Dataset
   <*> Just location
 
 toReference :: Project -> DatasetId -> BQ.DatasetReference
-toReference pid did = BQ.DatasetReference
-  { BQ.datasetId = Just (coerce did)
-  , BQ.projectId = Just (coerce pid)
+toReference (Project pid) (DatasetId did) = BQ.DatasetReference
+  { BQ.datasetId = Just did
+  , BQ.projectId = Just pid
   }
 
 

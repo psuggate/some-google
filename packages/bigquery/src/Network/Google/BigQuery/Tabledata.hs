@@ -50,11 +50,11 @@ insertAll
   => Project
   -> DatasetId
   -> TableId
-  -> [(Maybe Text, a)]
+  -> TableRows a
   -> Google BigQueryScopes Int
 insertAll (Project prj) (DatasetId did) (TableId tid) rows = GoogleT $ do
   let cmd = BQ.newBigQueryTabledataInsertAll did req prj tid
-      req = fromTableRows $ TableRows False False rows Nothing
+      req = fromTableRows rows
   view environment >>=
     (maybe 0 length . BQ.insertErrors <$>) . flip Google.send cmd
 
