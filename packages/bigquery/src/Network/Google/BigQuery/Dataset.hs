@@ -1,10 +1,15 @@
-{-# LANGUAGE DuplicateRecordFields, FlexibleInstances, InstanceSigs, LambdaCase,
-             MultiParamTypeClasses, NamedFieldPuns, NoImplicitPrelude,
-             OverloadedStrings, RecordWildCards, TypeFamilies #-}
+{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies,
+             DuplicateRecordFields, FlexibleInstances, InstanceSigs,
+             LambdaCase, MultiParamTypeClasses, NamedFieldPuns,
+             NoImplicitPrelude, OverloadedStrings, RecordWildCards,
+             TypeFamilies #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Network.Google.BigQuery.Dataset
   (
     module Export
+  , Dataset (..)
 
   , createDataset
   , lookupDataset
@@ -12,23 +17,41 @@ module Network.Google.BigQuery.Dataset
   )
 where
 
-import           Control.Lens                  (Lens', _Just, lens, over, set,
-                                                view, (.~), (?~), (^.), (^?))
+import           Control.Lens                  (Lens', lens, over, set, view,
+                                                (^.))
 import           Control.Monad.Google          as Export
 import           Data.Aeson                    as Aeson
 import           Data.Google.Types             as Export
 import qualified Gogol                         as Google
-import qualified Gogol.Auth.Scope              as Google
 import qualified Gogol.BigQuery                as BQ
 import           Network.Google.BigQuery.Types as Export
 import           Relude
 
+import qualified Data.List                     as List
 import           Data.Maybe                    (fromJust)
+
+
+-- * Data types for BigQuery datasets
+------------------------------------------------------------------------------
+data Dataset
+  = Dataset
+      { dataset'id       :: DatasetId
+      , dataset'project  :: Project
+      , dataset'name     :: Maybe Text
+      , dataset'location :: Maybe Text
+      }
+  deriving (Eq, Generic, NFData, Show)
+
+instance FromJSON Dataset where parseJSON = genericParseJSON jsonOpts'
+instance ToJSON   Dataset where toJSON = genericToJSON jsonOpts'
+
+instance GHasId Dataset DatasetId where
+  guid = lens dataset'id $ \r s -> r { dataset'id = s }
 
 
 -- * Instances
 ------------------------------------------------------------------------------
-instance GAPI Export.Dataset DatasetId where
+instance GAPI Dataset DatasetId where
   type ScopesFor Dataset = BigQueryScopes
   type ExtraArgs Dataset = ()
 
@@ -71,9 +94,8 @@ instance GAPI Export.Dataset DatasetId where
 instance GHasRef BQ.DatasetList_DatasetsItem (Maybe BQ.DatasetReference) where
   gref :: Lens' BQ.DatasetList_DatasetsItem (Maybe BQ.DatasetReference)
   gref  =
-    let g BQ.DatasetList_DatasetsItem{..} = datasetReference
-        s x@BQ.DatasetList_DatasetsItem{..} y =
-          x { BQ.datasetReference = y } :: BQ.DatasetList_DatasetsItem
+    let g BQ.DatasetList_DatasetsItem{datasetReference} = datasetReference
+        s x y = x { BQ.datasetReference = y } :: BQ.DatasetList_DatasetsItem
     in  lens g s
 
 instance GHasId BQ.DatasetList_DatasetsItem (Maybe DatasetId) where
@@ -92,8 +114,7 @@ instance GHasId BQ.DatasetReference (Maybe DatasetId) where
 instance HasProject BQ.DatasetReference (Maybe Project) where
   projectOf =
     let g BQ.DatasetReference{..} = fmap Project projectId
-        s x@BQ.DatasetReference{..} y =
-          x { BQ.projectId = getProject <$> y } :: BQ.DatasetReference
+        s x y = x { BQ.projectId = getProject <$> y } :: BQ.DatasetReference
     in  lens g s
 
 
@@ -112,15 +133,23 @@ listDatasets prj = glist prj ()
 -- * Conversion helpers
 ------------------------------------------------------------------------------
 toDataset :: BQ.Dataset -> Maybe Dataset
-toDataset BQ.Dataset{..} = Dataset
+toDataset BQ.Dataset{datasetReference, friendlyName, location} = Dataset
   <$> ((^.guid) =<< datasetReference)
   <*> ((^.projectOf) =<< datasetReference)
   <*> Just friendlyName
   <*> Just location
-  <*> Just Nothing
 
 toReference :: Project -> DatasetId -> BQ.DatasetReference
 toReference pid did = BQ.DatasetReference
   { BQ.datasetId = Just (coerce did)
   , BQ.projectId = Just (coerce pid)
+  }
+
+
+-- * Helpers
+------------------------------------------------------------------------------
+jsonOpts' :: Options
+jsonOpts'  = defaultOptions
+  { omitNothingFields = True
+  , fieldLabelModifier = List.tail . List.dropWhile (/= '\'')
   }

@@ -24,7 +24,7 @@ module Control.Monad.Google
   , Google.KnownScopes
   , MonadUnliftIO
 
-  , Env (..)
+  , Env
   , makeEnv
   , newGoogleEnv
 
@@ -34,9 +34,8 @@ module Control.Monad.Google
   )
 where
 
-import           Control.Lens                 (lens, view, (.~), (<&>))
-import           Control.Monad.IO.Unlift      (MonadIO, MonadUnliftIO, liftIO)
-import           Control.Monad.Reader         (MonadReader, ReaderT, runReaderT)
+import           Control.Lens                 (view, (.~))
+import           Control.Monad.IO.Unlift      (MonadUnliftIO)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import           Data.Proxy
 import           GHC.TypeLits                 (Symbol)
@@ -44,7 +43,6 @@ import           Gogol                        (Env, HasEnv (..))
 import qualified Gogol                        as Google
 import qualified Gogol.Auth                   as Google
 import           Relude
-import           System.IO                    (stdout)
 
 
 -- * Function-families for the evaluation of Google actions

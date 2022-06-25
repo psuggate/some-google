@@ -4,30 +4,23 @@
 
 module Main where
 
-import           Control.Lens                      (lens, makeLenses, view,
-                                                    (.~), (^.))
-import           Control.Monad.Google              as Google
-import           Gogol                             (HasEnv (..))
-import           Gogol.Compute.Metadata            (getProjectId)
-import qualified Network.Google.BigQuery.Dataset   as BQ
-import qualified Network.Google.BigQuery.Job       as BQ
-import qualified Network.Google.BigQuery.Table     as BQ
-import qualified Network.Google.BigQuery.Tabledata as BQ
-import           Network.Google.BigQuery.Types     (BigQueryScopes,
-                                                    DatasetId (..),
-                                                    Project (..), Table,
-                                                    TableId (..))
+import           Control.Lens            (lens, makeLenses, view, (.~), (^.))
+import           Control.Monad.Google    as Google
+import           Gogol                   (HasEnv (..))
+import           Gogol.Compute.Metadata  (getProjectId)
+import           Network.Google.BigQuery (BigQueryScopes, DatasetId (..),
+                                          Project (..), Table, TableId (..))
+import qualified Network.Google.BigQuery as BQ
 import           Options.Applicative
 import           Relude
 import           Text.Printf
 
-import qualified Gogol.Auth                        as Google
-import           Gogol.Internal.Auth               (Credentials (..),
-                                                    _serviceId)
+import qualified Gogol.Auth              as Google
+import           Gogol.Internal.Auth     (Credentials (..), _serviceId)
 
-import qualified Data.Aeson                        as Aeson
-import qualified Data.Yaml                         as YAML
-import qualified Data.Yaml.Pretty                  as YAML
+import qualified Data.Aeson              as Aeson
+import qualified Data.Yaml               as YAML
+import qualified Data.Yaml.Pretty        as YAML
 
 
 -- * Data types

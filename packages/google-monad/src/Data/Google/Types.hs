@@ -38,7 +38,7 @@ module Data.Google.Types
   )
 where
 
-import           Control.Lens         (Lens', lens, (.~), (<&>))
+import           Control.Lens         (Lens')
 import           Control.Monad.Google as Export hiding (Env)
 import           Data.Aeson           (FromJSON, ToJSON)
 import           Data.OpenApi         (ToParamSchema, ToSchema)

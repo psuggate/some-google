@@ -3,6 +3,8 @@
              InstanceSigs, MultiParamTypeClasses, NamedFieldPuns,
              NoImplicitPrelude, RecordWildCards, TypeFamilies #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Network.Google.BigQuery.Job.Types
   (
     module Network.Google.BigQuery.Job.Types
@@ -11,13 +13,10 @@ module Network.Google.BigQuery.Job.Types
 where
 
 import           Control.Lens                  (Lens', lens, over, set, view,
-                                                (?~), (^.))
+                                                (^.))
 import           Control.Monad.Google          as Export
-import           Data.Aeson                    as Aeson (FromJSON)
 import           Data.Google.Types             as Export
 import qualified Gogol                         as Google
-import qualified Gogol.Auth                    as Google
-import qualified Gogol.Auth.Scope              as Google
 import qualified Gogol.BigQuery                as BQ
 import           Network.Google.BigQuery.Types as Export
 import           Relude
@@ -80,9 +79,8 @@ instance GAPI Job JobId where
 instance GHasRef BQ.JobList_JobsItem (Maybe BQ.JobReference) where
   gref :: Lens' BQ.JobList_JobsItem (Maybe BQ.JobReference)
   gref  =
-    let g BQ.JobList_JobsItem{..} = jobReference
-        s x@BQ.JobList_JobsItem{..} y =
-          x { BQ.jobReference = y } :: BQ.JobList_JobsItem
+    let g BQ.JobList_JobsItem{jobReference} = jobReference
+        s x y = x { BQ.jobReference = y } :: BQ.JobList_JobsItem
     in  lens g s
 
 instance GHasId BQ.JobReference (Maybe JobId) where

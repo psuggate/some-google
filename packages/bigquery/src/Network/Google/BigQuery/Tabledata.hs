@@ -18,7 +18,6 @@ where
 import           Control.Lens                  (view)
 import           Control.Monad.Google          as Export
 import           Data.Aeson                    as Aeson
-import           Data.Aeson                    as Aeson (FromJSON, ToJSON)
 import qualified Gogol                         as Google
 import qualified Gogol.BigQuery                as BQ
 import           Network.Google.BigQuery.Types as Export
