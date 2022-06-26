@@ -44,10 +44,6 @@ newtype JobId
   = JobId { getJobId :: Text }
   deriving (Eq, Generic, NFData, Show)
 
-newtype Location
-  = Location { getLocation :: Text }
-  deriving (Eq, Generic, NFData, Show)
-
 
 -- * Instances
 ------------------------------------------------------------------------------

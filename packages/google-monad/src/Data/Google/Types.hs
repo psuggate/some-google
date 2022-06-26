@@ -27,6 +27,9 @@ module Data.Google.Types
   , HasProject (..)
   , Project (..)
 
+  , HasLocation (..)
+  , Location (..)
+
   , PageResults (..)
   , pageResults
 
@@ -55,6 +58,9 @@ class HasPath t where
 
 class HasProject t a | t -> a where
   projectOf :: Lens' t a
+
+class HasLocation t a | t -> a where
+  locationOf :: Lens' t a
 
 ------------------------------------------------------------------------------
 -- | General class of functions for the Google API.
@@ -87,6 +93,15 @@ instance IsString Project where fromString  = Project . toText
 instance ToText Project where toText  = getProject
 instance HasPath Project where pathOf  = mappend "projects/" . getProject
 instance HasProject Project Project where projectOf  = id
+
+------------------------------------------------------------------------------
+newtype Location
+  = Location { getLocation :: Text }
+  deriving (Eq, Generic, Show)
+  deriving newtype (FromHttpApiData, FromJSON, NFData, ToJSON)
+
+instance IsString Location where fromString  = Location . toText
+instance ToText Location where toText  = getLocation
 
 
 -- ** Miscellaneous API helper data types
