@@ -6,10 +6,10 @@ module Main where
 
 import           Control.Lens            (lens, makeLenses, view, (.~), (^.))
 import           Control.Monad.Google    as Google
-import           Gogol                   (HasEnv (..))
 import           Gogol.Compute.Metadata  (getProjectId)
 import           Network.Google.BigQuery (BigQueryScopes, DatasetId (..),
-                                          Project (..), Table, TableId (..))
+                                          Location (..), Project (..), Table,
+                                          TableId (..))
 import qualified Network.Google.BigQuery as BQ
 import           Options.Applicative
 import           Relude
@@ -22,15 +22,18 @@ import qualified Data.Aeson              as Aeson
 import qualified Data.Yaml               as YAML
 import qualified Data.Yaml.Pretty        as YAML
 
+import qualified Gogol.BigQuery          as BQ (QueryResponse (..))
+
 
 -- * Data types
 ------------------------------------------------------------------------------
 data Opts
   = Opts
-      { _project :: Text
-      , _dataset :: Text
-      , _tableId :: Text
-      , _verbose :: Bool
+      { _project  :: Text
+      , _dataset  :: Text
+      , _tableId  :: Text
+      , _location :: Text
+      , _verbose  :: Bool
       }
   deriving (Generic, Show)
 
@@ -53,6 +56,9 @@ parser  = Opts
   <*> option str (short 't' <> long "table" <> metavar "TABLE-ID" <>
                   value "covid19_open_data" <>
                   help "Table identifier for query" <> showDefault)
+  <*> option str (short 'l' <> long "location" <> metavar "LOCATION" <>
+                  value "australia-southeast1" <> showDefault <>
+                  help "Google region and datacentre location for the dataset")
   <*> switch     (short 'v' <> long "verbose" <> help "Extra debug output")
 
 ------------------------------------------------------------------------------
@@ -103,6 +109,16 @@ disp  = putTextLn . decodeUtf8 . YAML.encodePretty ycfg
   where
     ycfg = YAML.setConfCompare compare YAML.defConfig
 
+runq :: Opts -> Google BigQueryScopes ()
+runq opts = do
+  let prj = opts^.BQ.projectOf
+      did = DatasetId $ opts^.dataset
+      tid = opts^.tableId
+      loc = Location $ opts^.location
+      sql = printf "SELECT SUM(size) AS total FROM `%s`" tid
+  res <- BQ.queryJob prj did loc (fromString sql) False
+  pure () `maybe` (mapM_ print) $ BQ.rows res
+
 
 -- * Main entry-point
 ------------------------------------------------------------------------------
@@ -124,4 +140,5 @@ main  = do
     dumpTable opts
     liftIO . mapM_ print =<< BQ.listJobs proj
     liftIO . mapM_ (disp :: Aeson.Value -> IO ()) =<< BQ.list proj did tid (Just 10)
+    runq opts
   putTextLn "todo ..."

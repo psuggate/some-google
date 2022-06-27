@@ -22,7 +22,7 @@ where
 import           Control.Monad.Google              as Export
 import           Data.Aeson                        as Aeson (FromJSON)
 import           Data.Google.Types                 as Export
-import           Network.Google.BigQuery.Job.Types as Export
+import           Network.Google.BigQuery.Job.Query as Export
 import           Relude
 
 
