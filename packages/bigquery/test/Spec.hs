@@ -1,8 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Main where
 
-import qualified BigQuery.TypesSpec as Types
+import qualified BigQuery.SchemaSpec as Schem
+import qualified BigQuery.TypesSpec  as Types
 import           Relude
 import           Test.Hspec
 
@@ -11,7 +12,7 @@ import           Test.Hspec
 ------------------------------------------------------------------------------
 -- | Combined tests.
 specs :: Spec
-specs  = Types.spec
+specs  = Types.spec >> Schem.spec
 
 
 -- * Main entry-point

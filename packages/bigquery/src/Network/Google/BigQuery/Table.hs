@@ -24,20 +24,20 @@ module Network.Google.BigQuery.Table
   )
 where
 
-import           Control.Lens                  (Lens', lens, over, set, view,
-                                                (^.))
-import           Control.Monad.Google          as Export
-import           Data.Aeson                    as Aeson
-import           Data.Google.Types             as Export
-import qualified Gogol                         as Google
-import qualified Gogol.BigQuery                as BQ
-import           Network.Google.BigQuery.Types as Export
+import           Control.Lens                   (Lens', lens, over, set, view,
+                                                 (^.))
+import           Control.Monad.Google           as Export
+import           Data.Aeson                     as Aeson
+import           Data.Google.Types              as Export
+import qualified Gogol                          as Google
+import qualified Gogol.BigQuery                 as BQ
+import           Network.Google.BigQuery.Schema as Export
+import           Network.Google.BigQuery.Types  as Export
 import           Relude
-import           Text.Printf
-import           Web.HttpApiData               (FromHttpApiData (..))
+import           Web.HttpApiData                (FromHttpApiData (..))
 
-import qualified Data.List                     as List
-import           Data.Maybe                    (fromJust)
+import           Data.Maybe                     (fromJust)
+import           Network.Google.BigQuery.Util   (jsonOpts')
 
 
 -- ** Table data-types
@@ -88,6 +88,7 @@ instance FromHttpApiData TableType where
   parseUrlPiece = readEither . toString
 
 
+{-- }
 -- ** Schema definition data types
 ------------------------------------------------------------------------------
 -- | Schema-definition data type, that supports just a (strict) subset of the
@@ -164,6 +165,7 @@ deriving instance ToJSON   FieldType
 
 instance FromHttpApiData FieldType where
   parseUrlPiece = readEither . toString
+--}
 
 
 -- * Instances
@@ -268,59 +270,3 @@ toTable BQ.Table{friendlyName, schema, tableReference, timePartitioning, type'} 
   where
     typ = BQ.type' :: BQ.TimePartitioning -> Maybe Text
     prt = timePartitioning >>= typ >>= readMaybe . toString
-
-------------------------------------------------------------------------------
-toSchema :: BQ.TableSchema -> Schema
-toSchema (BQ.TableSchema xs) = Schema $ case xs of
-  Nothing -> []
-  Just fs -> toFields fs
-  where
-    typE =
-      let disp = printf "invalid field 'type' value: '%s'" :: Text -> String
-      in  error . fromString . disp . show
-    toFields (BQ.TableFieldSchema{..}:rs) = Field
-      { field'name = fromJust name
-      , field'mode = readMaybe . toString =<< mode
-      , field'type = fromMaybe (typE $ fromJust type') $ readMaybe . toString =<< type'
-      , field'fields = toFields <$> fields
-      }:toFields rs
-    toFields [] = []
-
-fromSchema :: Schema -> BQ.TableSchema
-fromSchema  = BQ.TableSchema . Just . map fromFields . schema'fields
-  where
-    mkField :: Text -> Maybe FieldMode -> FieldType -> BQ.TableFieldSchema
-    mkField n m t = BQ.newTableFieldSchema
-      { BQ.name  = Just n
-      , BQ.mode  = show <$> m
-      , BQ.type' = Just $ show t
-      }
-
-    fromFields :: Field -> BQ.TableFieldSchema
-    fromFields (Field n m t Nothing) = case t of
-      STRUCT -> errT t
-      RECORD -> errT t
-      -- GEOGRAPHY -> err "unsupported field-type: %s" (show t)
-      _      -> mkField n m t
-      where
-        errT = err "field of '%s' type should have subfields" . show
-    fromFields (Field n m t fs) = case t of
-      RECORD -> subFields n m fs
-      STRUCT -> subFields n m fs
-      _ -> err "field 'type' (%s) should not have subfields" (show t :: Text)
-
-    subFields :: Text -> Maybe FieldMode -> Maybe [Field] -> BQ.TableFieldSchema
-    subFields n m fs = (mkField n m RECORD) { BQ.fields = map fromFields <$> fs }
-
-------------------------------------------------------------------------------
-err :: String -> Text -> a
-err msg = error . fromString . printf msg
-
-
--- * Helpers
-------------------------------------------------------------------------------
-jsonOpts' :: Options
-jsonOpts'  = defaultOptions
-  { omitNothingFields = True
-  , fieldLabelModifier = List.tail . List.dropWhile (/= '\'')
-  }

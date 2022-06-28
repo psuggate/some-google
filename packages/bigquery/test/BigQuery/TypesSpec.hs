@@ -1,11 +1,11 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module BigQuery.TypesSpec where
 
 import           Data.Aeson                    as Aeson
+import           Relude
 import           Test.Hspec
 
--- import           Relude
 -- import qualified Hedgehog.Gen   as Gen
 -- import qualified Hedgehog.Range as Range
 -- import           Test.Hspec.Hedgehog (Gen, PropertyT, TestT, diff, forAll,
