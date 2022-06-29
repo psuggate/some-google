@@ -1,5 +1,5 @@
 name:                pubsub
-version:             0.1.0.0
+version:             0.1.0.1
 github:              "psuggate/some-google"
 license:             BSD3
 author:              "Patrick Suggate"
@@ -29,3 +29,15 @@ dependencies:
 
 library:
   source-dirs: src
+
+tests:
+  pubsub-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hspec
+    - pubsub

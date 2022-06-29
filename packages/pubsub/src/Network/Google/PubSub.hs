@@ -1,8 +1,9 @@
 {-# LANGUAGE ConstraintKinds, DataKinds, DeriveGeneric, DerivingStrategies,
-             FlexibleContexts, FlexibleInstances, FunctionalDependencies,
-             GeneralisedNewtypeDeriving, MultiParamTypeClasses,
-             NoImplicitPrelude, OverloadedStrings, PatternSynonyms,
+             FlexibleContexts, FlexibleInstances, GeneralisedNewtypeDeriving,
+             MultiParamTypeClasses, NoImplicitPrelude, OverloadedStrings,
              ScopedTypeVariables, TypeFamilies #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -21,8 +22,10 @@ module Network.Google.PubSub
 
   , type AllowPubSubRequest
   , type PubSubScopes
+
   , HasDetailsOf (..)
   , TopicName (..)
+  , PubSub.Topic (..)
 
   , getTopic
   , topicList
@@ -37,6 +40,7 @@ import           Control.Monad.Google as Export
 import           Data.Aeson           as Aeson
 import           Data.Event.Status    as Export (HasDetailsOf (..))
 import           Data.Google.Types    as Export
+import           GHC.TypeLits         (Symbol)
 import qualified Gogol                as Google
 import qualified Gogol.Auth.Scope     as Google
 import qualified Gogol.PubSub         as PubSub
@@ -53,7 +57,10 @@ type AllowPubSubRequest scopes =
   , Google.SatisfyScope PubSubScopes scopes
   )
 
-type PubSubScopes = '[PubSub.CloudPlatform'FullControl, PubSub.Pubsub'FullControl]
+type PubSubScopes
+  = '[ PubSub.CloudPlatform'FullControl
+     , PubSub.Pubsub'FullControl
+     ]
 
 ------------------------------------------------------------------------------
 instance HasDetailsOf PubSub.PubsubMessage (Maybe ByteString) where
@@ -72,14 +79,9 @@ newtype TopicName
   deriving (Eq, Generic, NFData, Show)
   deriving newtype (FromJSON, ToJSON)
 
-instance IsString TopicName where
-  fromString = TopicName . toText
-
-instance ToText TopicName where
-  toText = getTopicName
-
-instance HasPath TopicName where
-  pathOf = ("topics/" <>) . getTopicName
+instance IsString TopicName where fromString = TopicName . toText
+instance ToText TopicName   where toText = getTopicName
+instance HasPath TopicName  where pathOf = ("topics/" <>) . getTopicName
 
 
 -- * Pub/Sub top-level API
@@ -111,11 +113,13 @@ topicList proj = GoogleT $ do
 --    - extract the @Project@ from the @Env scopes@?
 --
 publish
-  :: forall a. ToJSON a
+  :: forall (scopes :: [Symbol]) a. ToJSON a
+  => AllowPubSubRequest scopes
   => Project
   -> TopicName
   -> a
-  -> Google PubSubScopes (Maybe [Text])
+  -> Google scopes (Maybe [Text])
+--   -> Google PubSubScopes (Maybe [Text])
 publish proj topic payload = GoogleT $ do
   env <- ask
   let path = pathOf proj <> "/" <> pathOf topic

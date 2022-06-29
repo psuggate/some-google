@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           pubsub
-version:        0.1.0.0
+version:        0.1.0.1
 synopsis:       Short description of your package
 description:    Please see the README on GitHub at <https://github.com/psuggate/some-google/packages/pubsub#readme>
 category:       Web
@@ -26,8 +26,8 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
       Network.Google.PubSub
+      Network.Google.PubSub.Class
   other-modules:
       Paths_pubsub
   hs-source-dirs:
@@ -42,5 +42,27 @@ library
     , google-monad
     , lens
     , logging-truck
+    , relude
+  default-language: Haskell2010
+
+test-suite pubsub-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_pubsub
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , gogol
+    , gogol-core
+    , gogol-pubsub
+    , google-monad
+    , hspec
+    , lens
+    , logging-truck
+    , pubsub
     , relude
   default-language: Haskell2010

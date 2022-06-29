@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveGeneric, DuplicateRecordFields, FlexibleContexts,
-             FlexibleInstances, GADTs, GeneralisedNewtypeDeriving,
-             InstanceSigs, MultiParamTypeClasses, NamedFieldPuns,
-             NoImplicitPrelude, RecordWildCards, TypeFamilies #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, DeriveGeneric, DuplicateRecordFields,
+             FlexibleContexts, FlexibleInstances, GADTs,
+             GeneralisedNewtypeDeriving, InstanceSigs, MultiParamTypeClasses,
+             NamedFieldPuns, NoImplicitPrelude, RankNTypes, RecordWildCards,
+             ScopedTypeVariables, TypeFamilies #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -58,7 +59,7 @@ instance GAPI Job JobId where
   glookup prj loc jid = GoogleT $ do
     let cmd = (BQ.newBigQueryJobsGet (coerce jid) (coerce prj))
           { BQ.location = coerce <$> loc } :: BQ.BigQueryJobsGet
-    view environment >>= flip Google.send cmd
+    view environment >>= (\(env :: Env scopes) -> Google.send env cmd)
 
   glist :: Project -> Maybe Location -> Google BigQueryScopes [JobId]
   glist prj _ = GoogleT $ do
