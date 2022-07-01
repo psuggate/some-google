@@ -4,9 +4,13 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Network.Google.PubSub.Class where
+module Network.Google.PubSub.Class
+  (
+    module Export
+  )
+where
 
-import           Network.Google.PubSub
+import           Network.Google.PubSub as Export
 import           Relude
 
 
@@ -19,3 +23,6 @@ instance GAPI Topic TopicName where
   glookup p () n = getTopic p n
   glist   p ()   = topicList p *> pure []
   gdelete _ () _ = pure ()
+
+instance GList Topic where
+  glist' p () = topicList' p

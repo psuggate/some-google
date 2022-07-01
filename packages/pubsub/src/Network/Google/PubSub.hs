@@ -20,6 +20,9 @@ module Network.Google.PubSub
   (
     module Export
 
+  , Google.KnownScopes
+  , Google.SatisfyScope
+
   , type AllowPubSubRequest
   , type PubSubScopes
 
@@ -29,6 +32,7 @@ module Network.Google.PubSub
 
   , getTopic
   , topicList
+  , topicList'
   , publish
 
   , toMessage
@@ -87,7 +91,9 @@ instance HasPath TopicName  where pathOf = ("topics/" <>) . getTopicName
 -- * Pub/Sub top-level API
 ------------------------------------------------------------------------------
 getTopic
-  :: AllowPubSubRequest scopes
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope '[ PubSub.CloudPlatform'FullControl
+                          , PubSub.Pubsub'FullControl ] scopes
   => Project
   -> TopicName
   -> Google scopes PubSub.Topic
@@ -97,13 +103,26 @@ getTopic proj topic = GoogleT $ do
   flip Google.send treq =<< ask
 
 topicList
-  :: AllowPubSubRequest scopes
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope '[ PubSub.CloudPlatform'FullControl
+                          , PubSub.Pubsub'FullControl ] scopes
   => Project
   -> Google scopes (Maybe [PubSub.Topic])
 topicList proj = GoogleT $ do
   env <- ask
   let path = pathOf proj
   PubSub.topics <$> env `Google.send` PubSub.newPubSubProjectsTopicsList path
+
+topicList'
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope '[ PubSub.CloudPlatform'FullControl
+                          , PubSub.Pubsub'FullControl ] scopes
+  => Project
+  -> Google scopes [PubSub.Topic]
+topicList' proj = GoogleT $ do
+  env <- ask
+  let path = pathOf proj
+  fromMaybe [] . PubSub.topics <$> env `Google.send` PubSub.newPubSubProjectsTopicsList path
 
 ------------------------------------------------------------------------------
 -- | Send a message to the indicated Pub/Sub topic.
@@ -114,7 +133,9 @@ topicList proj = GoogleT $ do
 --
 publish
   :: forall (scopes :: [Symbol]) a. ToJSON a
-  => AllowPubSubRequest scopes
+  => Google.KnownScopes scopes
+  => Google.SatisfyScope '[ PubSub.CloudPlatform'FullControl
+                          , PubSub.Pubsub'FullControl ] scopes
   => Project
   -> TopicName
   -> a

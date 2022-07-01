@@ -23,6 +23,8 @@ module Data.Google.Types
   , GHasId (..)
   , GHasRef (..)
 
+  , GList (..)
+
   , HasPath (..)
   , HasProject (..)
   , Project (..)
@@ -62,8 +64,18 @@ class HasProject t a | t -> a where
 class HasLocation t a | t -> a where
   locationOf :: Lens' t a
 
+
+-- ** Google API function-families
 ------------------------------------------------------------------------------
 -- | General class of functions for the Google API.
+{-- }
+class GAPI t where
+  type ScopesFor t :: [Symbol]
+  type ExtraArgs t :: Type
+  glist :: Project -> ExtraArgs t -> Google (ScopesFor t) [t]
+--}
+
+{--}
 class GAPI t i | t -> i, i -> t where
   type ScopesFor t :: [Symbol]
   type ExtraArgs t :: Type
@@ -71,7 +83,12 @@ class GAPI t i | t -> i, i -> t where
   glookup :: Project -> ExtraArgs t -> i -> Google (ScopesFor t) t
   glist   :: Project -> ExtraArgs t      -> Google (ScopesFor t) [i]
   gdelete :: Project -> ExtraArgs t -> i -> Google (ScopesFor t) ()
+--}
 
+class GList t where
+  glist' :: Project -> ExtraArgs t -> Google (ScopesFor t) [t]
+
+------------------------------------------------------------------------------
 class GHasId t i | t -> i where
   guid :: Lens' t i
 

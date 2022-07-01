@@ -5,12 +5,13 @@ module Main where
 
 import           Control.Monad.Google
 import           Data.Google.Types
-import           Network.Google.PubSub
 import           Relude
 import           Test.Hspec
 
 -- import           Gogol.Auth.Scope
 import           Gogol.PubSub
+
+import           Network.Google.PubSub.Class
 
 
 spec :: Spec
@@ -25,10 +26,13 @@ spec  = describe "Pub/Sub tests" $ do
       res <- withGoogle (topicList prj :: Google PubSubScopes (Maybe [Topic]))
       (const () <$> res) `shouldBe` Just ()
 
-    it "can fetch a @glist@ of topics" $ do
-      res <- withGoogle (glist prj () :: Google '[Pubsub'FullControl] [TopicName])
+{--}
+    it "can fetch a @glist'@ of topics" $ do
+      -- res <- withGoogle (glist' prj () :: Google '[Pubsub'FullControl] [Topic])
+      res <- withGoogle (glist' prj () :: Google PubSubScopes [Topic])
       -- res <- withGoogle (glist prj () :: Google PubSubScopes [TopicName])
       res `shouldBe` []
+--}
 
 
 main :: IO ()
