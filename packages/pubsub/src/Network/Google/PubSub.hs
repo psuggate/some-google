@@ -140,7 +140,6 @@ publish
   -> TopicName
   -> a
   -> Google scopes (Maybe [Text])
---   -> Google PubSubScopes (Maybe [Text])
 publish proj topic payload = GoogleT $ do
   env <- ask
   let path = pathOf proj <> "/" <> pathOf topic

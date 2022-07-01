@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies,
+{-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, DerivingStrategies,
              DuplicateRecordFields, FlexibleInstances, InstanceSigs,
              MultiParamTypeClasses, NamedFieldPuns, NoImplicitPrelude,
              OverloadedStrings, RecordWildCards, StandaloneDeriving,
@@ -20,7 +20,11 @@ module Network.Google.BigQuery.Table
   , lookupTable
   , listTables
 
+  , tableList
+
   , fromTable
+  , toTable
+  , fromTablesItem
   )
 where
 
@@ -30,6 +34,7 @@ import           Control.Monad.Google           as Export
 import           Data.Aeson                     as Aeson
 import           Data.Google.Types              as Export
 import qualified Gogol                          as Google
+import qualified Gogol.Auth.Scope               as Google
 import qualified Gogol.BigQuery                 as BQ
 import           Network.Google.BigQuery.Schema as Export
 import           Network.Google.BigQuery.Types  as Export
@@ -242,6 +247,21 @@ lookupTable  = glookup
 listTables :: Project -> DatasetId -> Google BigQueryScopes [TableId]
 listTables  = glist
 
+------------------------------------------------------------------------------
+tableList
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope '[ BQ.Bigquery'FullControl
+                          , BQ.CloudPlatform'FullControl
+                          , BQ.CloudPlatform'ReadOnly ] scopes
+  => Project
+  -> DatasetId
+  -> Google scopes [Table]
+tableList prj did = GoogleT $ do
+  let cmd = BQ.newBigQueryTablesList (coerce did) (coerce prj)
+      res :: BQ.TableList -> [Table]
+      res = maybe [] (map fromTablesItem) . BQ.tables
+  view environment >>= \env -> res <$> Google.send env cmd
+
 
 -- * Conversion helpers
 ------------------------------------------------------------------------------
@@ -264,6 +284,18 @@ toTable BQ.Table{friendlyName, schema, tableReference, timePartitioning, type'} 
   { table'id = fromJust $ tableReference >>= (^.guid)
   , table'name = friendlyName
   , table'schema = maybe (error "missing schema") toSchema schema
+  , table'partition = prt
+  , table'type = readMaybe . toString =<< type'
+  }
+  where
+    typ = BQ.type' :: BQ.TimePartitioning -> Maybe Text
+    prt = timePartitioning >>= typ >>= readMaybe . toString
+
+fromTablesItem :: BQ.TableList_TablesItem -> Table
+fromTablesItem item@BQ.TableList_TablesItem{friendlyName, timePartitioning, type'} = Table
+  { table'id = fromJust $ item ^. guid
+  , table'name = friendlyName
+  , table'schema = Schema []
   , table'partition = prt
   , table'type = readMaybe . toString =<< type'
   }
