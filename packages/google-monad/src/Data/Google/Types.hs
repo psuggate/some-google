@@ -1,8 +1,8 @@
 {-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, DerivingStrategies,
              DerivingVia, FlexibleContexts, FunctionalDependencies,
              GeneralisedNewtypeDeriving, MultiParamTypeClasses,
-             OverloadedStrings, PolyKinds, StandaloneDeriving, TypeFamilies,
-             TypeFamilyDependencies #-}
+             OverloadedStrings, PolyKinds, RankNTypes, StandaloneDeriving,
+             TypeFamilies, TypeFamilyDependencies #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -19,11 +19,13 @@ module Data.Google.Types
   (
     module Export
 
-  , GAPI (..)
   , GHasId (..)
   , GHasRef (..)
 
+  , GGet (..)
+  , GPut (..)
   , GList (..)
+  , GDel (..)
 
   , HasPath (..)
   , HasProject (..)
@@ -49,6 +51,7 @@ import           Data.Aeson           (FromJSON, ToJSON)
 import           Data.OpenApi         (ToParamSchema, ToSchema)
 import           GHC.TypeLits
 import           Gogol                (Base64 (..))
+import           Gogol.Auth.Scope     (SatisfyScope)
 import           Relude
 import           Web.HttpApiData      (FromHttpApiData)
 
@@ -68,25 +71,33 @@ class HasLocation t a | t -> a where
 -- ** Google API function-families
 ------------------------------------------------------------------------------
 -- | General class of functions for the Google API.
-{-- }
-class GAPI t where
-  type ScopesFor t :: [Symbol]
-  type ExtraArgs t :: Type
-  glist :: Project -> ExtraArgs t -> Google (ScopesFor t) [t]
---}
+class GGet t i | t -> i, i -> t where
+  type GetAuth t :: [Symbol]
+  type GetArgs t :: Type
+  gget :: KnownScopes scopes
+       => SatisfyScope (GetAuth t) scopes
+       => Project -> GetArgs t -> i -> Google scopes t
 
-{--}
-class GAPI t i | t -> i, i -> t where
-  type ScopesFor t :: [Symbol]
-  type ExtraArgs t :: Type
-  ginsert :: Project -> ExtraArgs t -> t -> Google (ScopesFor t) i
-  glookup :: Project -> ExtraArgs t -> i -> Google (ScopesFor t) t
-  glist   :: Project -> ExtraArgs t      -> Google (ScopesFor t) [i]
-  gdelete :: Project -> ExtraArgs t -> i -> Google (ScopesFor t) ()
---}
+class GPut t r | t -> r, r -> t where
+  type PutAuth t :: [Symbol]
+  type PutArgs t :: Type
+  gput :: KnownScopes scopes
+       => SatisfyScope (PutAuth t) scopes
+       => Project -> PutArgs t -> t -> Google scopes r
 
 class GList t where
-  glist' :: Project -> ExtraArgs t -> Google (ScopesFor t) [t]
+  type ListAuth t :: [Symbol]
+  type ListArgs t :: Type
+  glist :: KnownScopes scopes
+        => SatisfyScope (ListAuth t) scopes
+        => Project -> ListArgs t -> Google scopes [t]
+
+class GDel t where
+  type DelAuth t :: [Symbol]
+  type DelArgs t :: Type
+  gdel :: KnownScopes scopes
+       => SatisfyScope (DelAuth t) scopes
+       => Project -> DelArgs t -> t -> Google scopes ()
 
 ------------------------------------------------------------------------------
 class GHasId t i | t -> i where

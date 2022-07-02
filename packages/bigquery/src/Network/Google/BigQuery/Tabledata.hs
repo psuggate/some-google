@@ -106,8 +106,7 @@ fromTableRows TableRows{..} = BQ.newTableDataInsertAllRequest
   where
     go :: Maybe Text -> a -> BQ.TableDataInsertAllRequest_RowsItem
     go mid = BQ.TableDataInsertAllRequest_RowsItem mid . Just . jsonObject'
---     go mid = BQ.TableDataInsertAllRequest_RowsItem mid . jsonObject
 
-newTableRows :: (ToJSON a, FromJSON a, Foldable f) => f a -> TableRows a
+newTableRows :: Foldable f => f a -> TableRows a
 newTableRows  =
   TableRows False False `flip` Nothing <<< map (Nothing,) . toList

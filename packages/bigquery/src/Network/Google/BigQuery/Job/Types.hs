@@ -1,8 +1,9 @@
-{-# LANGUAGE ConstraintKinds, DataKinds, DeriveGeneric, DuplicateRecordFields,
-             FlexibleContexts, FlexibleInstances, GADTs,
-             GeneralisedNewtypeDeriving, InstanceSigs, MultiParamTypeClasses,
-             NamedFieldPuns, NoImplicitPrelude, RankNTypes, RecordWildCards,
-             ScopedTypeVariables, TypeFamilies #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, DeriveAnyClass, DeriveGeneric,
+             DerivingVia, DuplicateRecordFields, FlexibleContexts,
+             FlexibleInstances, GADTs, GeneralisedNewtypeDeriving,
+             InstanceSigs, MultiParamTypeClasses, NamedFieldPuns,
+             NoImplicitPrelude, RankNTypes, RecordWildCards,
+             ScopedTypeVariables, StandaloneDeriving, TypeFamilies #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -16,6 +17,7 @@ where
 import           Control.Lens                  (Lens', lens, over, set, view,
                                                 (^.))
 import           Control.Monad.Google          as Export
+import           Data.Aeson                    as Aeson
 import           Data.Google.Types             as Export
 import qualified Gogol                         as Google
 import qualified Gogol.BigQuery                as BQ
@@ -45,9 +47,57 @@ newtype JobId
   = JobId { getJobId :: Text }
   deriving (Eq, Generic, NFData, Show)
 
+instance ToText JobId where toText  = getJobId
+deriving via Text instance ToJSON JobId
+
 
 -- * Instances
 ------------------------------------------------------------------------------
+instance GGet Job JobId where
+  type GetAuth Job = '[ BQ.Bigquery'FullControl
+                      , BQ.CloudPlatform'FullControl
+                      , BQ.CloudPlatform'ReadOnly ]
+  type GetArgs Job = Maybe Location
+  gget prj loc jid = GoogleT $ do
+    let cmd = (BQ.newBigQueryJobsGet (coerce jid) (coerce prj))
+          { BQ.location = coerce <$> loc } :: BQ.BigQueryJobsGet
+    view environment >>= (\(env :: Env scopes) -> Google.send env cmd)
+
+{-- }
+instance GPut Job JobId where
+  type PutAuth Job = '[ BQ.Bigquery'FullControl
+                      , BQ.CloudPlatform'FullControl ]
+  type PutArgs Job = Maybe Location
+  gput _ _ _ = pure undefined
+--}
+
+------------------------------------------------------------------------------
+data JobsListArgs
+  = JobsListArgs
+      { jobsListArgs'maxResults  :: Maybe Word32
+      , jobsListArgs'parentJobId :: Maybe JobId
+      }
+  deriving (Eq, Generic, NFData, Show)
+
+newJobsListArgs :: JobsListArgs
+newJobsListArgs  = JobsListArgs Nothing Nothing
+
+instance GList JobId where
+  type ListAuth JobId = '[ BQ.Bigquery'FullControl
+                         , BQ.CloudPlatform'FullControl
+                         , BQ.CloudPlatform'ReadOnly ]
+  type ListArgs JobId = JobsListArgs
+  glist (Project prj) arg = GoogleT $ do
+    let cmd = (BQ.newBigQueryJobsList prj)
+          { BQ.parentJobId = toText <$> jobsListArgs'parentJobId arg
+          , BQ.maxResults = jobsListArgs'maxResults arg
+          }
+        res :: BQ.JobList -> [BQ.JobReference]
+        res  = maybe [] (catMaybes . map (^.gref)) . BQ.jobs
+    view environment >>=
+      (catMaybes . map (^.guid) . res <$>) . flip Google.send cmd
+
+{-- }
 instance GAPI Job JobId where
   type ScopesFor Job = BigQueryScopes
   type ExtraArgs Job = Maybe Location
@@ -71,6 +121,7 @@ instance GAPI Job JobId where
 
   gdelete :: Project -> Maybe Location -> JobId -> Google BigQueryScopes ()
   gdelete _ _ _ = pure ()
+--}
 
 ------------------------------------------------------------------------------
 instance GHasRef BQ.JobList_JobsItem (Maybe BQ.JobReference) where

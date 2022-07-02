@@ -1,5 +1,5 @@
-{-# LANGUAGE DataKinds, NoImplicitPrelude, OverloadedStrings,
-             TypeApplications #-}
+{-# LANGUAGE DataKinds, NoImplicitPrelude, OverloadedStrings, TypeApplications,
+             TypeFamilies #-}
 
 module Main where
 
@@ -28,8 +28,7 @@ spec  = describe "Pub/Sub tests" $ do
 
 {--}
     it "can fetch a @glist'@ of topics" $ do
-      -- res <- withGoogle (glist' prj () :: Google '[Pubsub'FullControl] [Topic])
-      res <- withGoogle (glist' prj () :: Google PubSubScopes [Topic])
+      res <- withGoogle (glist prj () :: Google '[Pubsub'FullControl] [TopicName])
       -- res <- withGoogle (glist prj () :: Google PubSubScopes [TopicName])
       res `shouldBe` []
 --}

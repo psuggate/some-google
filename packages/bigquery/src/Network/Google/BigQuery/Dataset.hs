@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies,
+{-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, DerivingStrategies,
              DuplicateRecordFields, FlexibleInstances, InstanceSigs,
              LambdaCase, MultiParamTypeClasses, NamedFieldPuns,
-             NoImplicitPrelude, OverloadedStrings, RecordWildCards,
+             NoImplicitPrelude, OverloadedStrings, RankNTypes, RecordWildCards,
              TypeFamilies #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -23,6 +23,7 @@ import           Control.Monad.Google          as Export
 import           Data.Aeson                    as Aeson
 import           Data.Google.Types             as Export
 import qualified Gogol                         as Google
+import qualified Gogol.Auth.Scope              as Google
 import qualified Gogol.BigQuery                as BQ
 import           Network.Google.BigQuery.Types as Export
 import           Relude
@@ -51,6 +52,44 @@ instance GHasId Dataset DatasetId where
 
 -- * Instances
 ------------------------------------------------------------------------------
+instance GPut Dataset DatasetId where
+  type PutAuth Dataset = '[ BQ.Bigquery'FullControl
+                          , BQ.CloudPlatform'FullControl ]
+  type PutArgs Dataset = ()
+  gput pid () dset = GoogleT $ do
+    env <- ask
+    let dref = toReference pid $ dset ^. guid
+        dreq = BQ.newDataset
+          { BQ.datasetReference = Just dref
+          } :: BQ.Dataset
+        proj = coerce pid
+    dat <- env `Google.send` BQ.newBigQueryDatasetsInsert dreq proj
+    pure $ fromJust (toDataset dat) ^. guid
+
+-- | Retreive the metadata for the indicated dataset.
+instance GGet Dataset DatasetId where
+  type GetAuth Dataset = '[ BQ.Bigquery'FullControl
+                          , BQ.CloudPlatform'FullControl
+                          , BQ.CloudPlatform'ReadOnly ]
+  type GetArgs Dataset = ()
+  gget (Project pid) () (DatasetId did) = GoogleT $ do
+    let cmd = BQ.newBigQueryDatasetsGet did pid
+    view environment >>= fmap (fromJust . toDataset) . flip Google.send cmd
+
+-- | List the known datasets.
+instance GList DatasetId where
+  type ListAuth DatasetId = '[ BQ.Bigquery'FullControl
+                             , BQ.CloudPlatform'FullControl
+                             , BQ.CloudPlatform'ReadOnly ]
+  type ListArgs DatasetId = ()
+  glist (Project pid) () = GoogleT $ do
+    let cmd = BQ.newBigQueryDatasetsList pid
+        res :: BQ.DatasetList -> [BQ.DatasetList_DatasetsItem]
+        res = fromMaybe [] . BQ.datasets
+    view environment >>=
+      (mapMaybe (^.guid) . res <$>) . flip Google.send cmd
+
+{-- }
 instance GAPI Dataset DatasetId where
   type ScopesFor Dataset = BigQueryScopes
   type ExtraArgs Dataset = ()
@@ -89,6 +128,7 @@ instance GAPI Dataset DatasetId where
 
   gdelete :: Project -> () -> DatasetId -> Google BigQueryScopes ()
   gdelete _ _ _ = pure ()
+--}
 
 ------------------------------------------------------------------------------
 instance GHasRef BQ.DatasetList_DatasetsItem (Maybe BQ.DatasetReference) where
@@ -120,13 +160,32 @@ instance HasProject BQ.DatasetReference (Maybe Project) where
 
 -- * BigQuery dataset top-level API
 ------------------------------------------------------------------------------
-createDataset :: Project -> Dataset -> Google BigQueryScopes DatasetId
-createDataset prj = ginsert prj ()
+createDataset
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope '[ BQ.Bigquery'FullControl
+                          , BQ.CloudPlatform'FullControl ] scopes
+  => Project
+  -> Dataset
+  -> Google scopes DatasetId
+createDataset prj = gput prj ()
 
-lookupDataset :: Project -> DatasetId -> Google BigQueryScopes Dataset
-lookupDataset prj = glookup prj ()
+lookupDataset
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope '[ BQ.Bigquery'FullControl
+                          , BQ.CloudPlatform'FullControl
+                          , BQ.CloudPlatform'ReadOnly ] scopes
+  => Project
+  -> DatasetId
+  -> Google scopes Dataset
+lookupDataset prj = gget prj ()
 
-listDatasets :: Project -> Google BigQueryScopes [DatasetId]
+listDatasets
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope '[ BQ.Bigquery'FullControl
+                          , BQ.CloudPlatform'FullControl
+                          , BQ.CloudPlatform'ReadOnly ] scopes
+  => Project
+  -> Google scopes [DatasetId]
 listDatasets prj = glist prj ()
 
 

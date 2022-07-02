@@ -175,6 +175,36 @@ instance FromHttpApiData FieldType where
 
 -- * Instances
 ------------------------------------------------------------------------------
+instance GGet Table TableId where
+  type GetAuth Table = '[ BQ.Bigquery'FullControl
+                        , BQ.CloudPlatform'FullControl
+                        , BQ.CloudPlatform'ReadOnly ]
+  type GetArgs Table = DatasetId
+  gget (Project pid) (DatasetId did) (TableId tid) = GoogleT $ do
+    let cmd = BQ.newBigQueryTablesGet did pid tid
+    view environment >>= fmap toTable . flip Google.send cmd
+
+instance GPut Table TableId where
+  type PutAuth Table = '[ BQ.Bigquery'FullControl
+                        , BQ.CloudPlatform'FullControl ]
+  type PutArgs Table = DatasetId
+  gput prj did tab = GoogleT $ do
+    let cmd = BQ.newBigQueryTablesInsert (coerce did) pay (coerce prj)
+        pay = fromTable prj did tab
+    view environment >>= fmap (fromJust . (^.guid)) . flip Google.send cmd
+
+instance GList TableId where
+  type ListAuth TableId = '[ BQ.Bigquery'FullControl
+                           , BQ.CloudPlatform'FullControl
+                           , BQ.CloudPlatform'ReadOnly ]
+  type ListArgs TableId = DatasetId
+  glist (Project pid) (DatasetId did) = GoogleT $ do
+    let cmd = BQ.newBigQueryTablesList did pid
+        res :: BQ.TableList -> [BQ.TableList_TablesItem]
+        res = fromMaybe [] . BQ.tables
+    view environment >>= (mapMaybe (^.guid) . res <$>) . flip Google.send cmd
+
+{-- }
 instance GAPI Table TableId where
   type ScopesFor Table = BigQueryScopes
   type ExtraArgs Table = DatasetId
@@ -200,6 +230,7 @@ instance GAPI Table TableId where
 
   gdelete :: Project -> DatasetId -> TableId -> Google BigQueryScopes ()
   gdelete _ _ _ = pure ()
+--}
 
 ------------------------------------------------------------------------------
 instance GHasRef BQ.Table (Maybe BQ.TableReference) where
@@ -239,10 +270,10 @@ instance GHasId BQ.TableList_TablesItem (Maybe TableId) where
 ------------------------------------------------------------------------------
 -- | Create a new table.
 createTable :: Project -> DatasetId -> Table -> Google BigQueryScopes TableId
-createTable  = ginsert
+createTable  = gput
 
 lookupTable :: Project -> DatasetId -> TableId -> Google BigQueryScopes Table
-lookupTable  = glookup
+lookupTable  = gget
 
 listTables :: Project -> DatasetId -> Google BigQueryScopes [TableId]
 listTables  = glist
@@ -256,8 +287,8 @@ tableList
   => Project
   -> DatasetId
   -> Google scopes [Table]
-tableList prj did = GoogleT $ do
-  let cmd = BQ.newBigQueryTablesList (coerce did) (coerce prj)
+tableList (Project pid) (DatasetId did) = GoogleT $ do
+  let cmd = BQ.newBigQueryTablesList did pid
       res :: BQ.TableList -> [Table]
       res = maybe [] (map fromTablesItem) . BQ.tables
   view environment >>= \env -> res <$> Google.send env cmd
