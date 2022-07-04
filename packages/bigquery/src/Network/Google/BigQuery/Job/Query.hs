@@ -12,6 +12,7 @@ where
 
 import           Control.Lens                      (view)
 import qualified Gogol                             as Google
+import qualified Gogol.Auth.Scope                  as Google
 import qualified Gogol.BigQuery                    as BQ
 import           Network.Google.BigQuery.Job.Types as Export
 import           Relude
@@ -36,12 +37,14 @@ type SQL = Text
 -- | Synchronously queries the indicated dataset, and using the given SQL
 --   query-string.
 queryJob
-  :: Project
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (Google.Scopes BQ.BigQueryJobsQuery) scopes
+  => Project
   -> DatasetId
   -> Location
   -> SQL
   -> Bool
-  -> Google BigQueryScopes BQ.QueryResponse
+  -> Google scopes BQ.QueryResponse
 queryJob (Project prj) (DatasetId did) (Location loc) sql dry = GoogleT $ do
   let cmd = BQ.newBigQueryJobsQuery req prj
       req = BQ.newQueryRequest

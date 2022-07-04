@@ -1,6 +1,6 @@
 {-# LANGUAGE ConstraintKinds, DataKinds, DeriveAnyClass, DeriveGeneric,
              DerivingStrategies, DerivingVia, GADTs,
-             GeneralisedNewtypeDeriving, MultiParamTypeClasses,
+             GeneralisedNewtypeDeriving, LambdaCase, MultiParamTypeClasses,
              NoImplicitPrelude, OverloadedStrings, StandaloneDeriving,
              TypeFamilies #-}
 
@@ -19,9 +19,6 @@ module Network.Google.BigQuery.Types
   (
     module Export
 
-  , AllowBigQueryRequest
-  , BigQueryScopes
-
   , DatasetId (..)
   , TableId (..)
 
@@ -30,29 +27,16 @@ module Network.Google.BigQuery.Types
   )
 where
 
-import           Data.Aeson        as Aeson
-import           Data.Google.Types as Export (GHasId (..), Insertions (..),
-                                              PageResults (..), Project (..),
-                                              insertions, pageResults)
-import qualified Gogol.Auth.Scope  as Google
-import qualified Gogol.BigQuery    as BigQuery
+import           Data.Aeson          as Aeson
+import qualified Data.Aeson.KeyMap   as Aeson
+import           Data.Google.Types   as Export (GHasId (..), Insertions (..),
+                                                PageResults (..), Project (..),
+                                                insertions, pageResults)
+import           Data.HashMap.Strict as HashMap
+import           Data.Map.Strict     as Map
+import qualified Gogol.BigQuery      as BigQuery
 import           Relude
-import           Web.HttpApiData   (FromHttpApiData (..))
-
-
--- * Type constraints
-------------------------------------------------------------------------------
--- | Allow a Pub/Sub action to be performed if any of the required scopes are
---   present.
-type AllowBigQueryRequest scopes =
-  ( Google.KnownScopes scopes
-  , Google.SatisfyScope BigQueryScopes scopes
-  )
-
-type BigQueryScopes
-  = '[ BigQuery.CloudPlatform'FullControl
-     , BigQuery.Bigquery'FullControl
-     ]
+import           Web.HttpApiData     (FromHttpApiData (..))
 
 
 -- * Data types for BigQuery datasets and their tables
@@ -80,8 +64,16 @@ newtype TableId
 -- * Helpers
 ------------------------------------------------------------------------------
 -- | Convert the give value into Gogol's bizarre @JsonObject@ value.
-jsonObject' :: (FromJSON a, ToJSON a) => a -> BigQuery.JsonObject
+jsonObject' :: ToJSON a => a -> BigQuery.JsonObject
 jsonObject' = fromMaybe (error "cannot JSON-serialise object") . jsonObject
 
-jsonObject :: (FromJSON a, ToJSON a) => a -> Maybe BigQuery.JsonObject
-jsonObject  = fmap BigQuery.JsonObject . Aeson.decode . Aeson.encode
+-- jsonObject :: (FromJSON a, ToJSON a) => a -> Maybe BigQuery.JsonObject
+-- jsonObject  = fmap BigQuery.JsonObject . Aeson.decode . Aeson.encode
+
+jsonObject :: ToJSON a => a -> Maybe BigQuery.JsonObject
+jsonObject  = toJSON >>> \case
+  Object kv -> Just . BigQuery.JsonObject $ toHashMap kv
+  _         -> Nothing
+
+toHashMap :: Aeson.KeyMap a -> HashMap Text a
+toHashMap  = Aeson.toMapText >>> Map.toList >>> HashMap.fromList

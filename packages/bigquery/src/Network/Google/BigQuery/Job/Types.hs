@@ -23,6 +23,7 @@ import qualified Gogol                         as Google
 import qualified Gogol.BigQuery                as BQ
 import           Network.Google.BigQuery.Types as Export
 import           Relude
+import           Web.HttpApiData               (FromHttpApiData (..))
 
 
 -- * Data types for BigQuery jobs
@@ -45,10 +46,10 @@ data JobConfig a where
 
 newtype JobId
   = JobId { getJobId :: Text }
-  deriving (Eq, Generic, NFData, Show)
+  deriving (Eq, Generic, Show)
+  deriving newtype (FromHttpApiData, FromJSON, NFData, ToJSON)
 
 instance ToText JobId where toText  = getJobId
-deriving via Text instance ToJSON JobId
 
 
 -- * Instances

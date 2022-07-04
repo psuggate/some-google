@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts, LambdaCase, NoImplicitPrelude,
-             OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, LambdaCase, NoImplicitPrelude, OverloadedStrings,
+             TypeApplications #-}
 
 module System.Logger.Google
   (
@@ -20,6 +20,7 @@ import           Colog.Core              (LogAction)
 import qualified Colog.Core              as Colog
 import           Control.Lens            (lens, set, (^.))
 import           Control.Monad.IO.Unlift
+import           Data.Aeson              as Aeson
 import qualified Data.ByteString.Builder as B
 import           Data.Event.Status       as Export hiding (stderrLogger,
                                                     stdoutLogger)
@@ -29,6 +30,8 @@ import qualified Gogol.Internal.Logger   as Google
 import           Relude
 import           System.IO               (hSetBinaryMode)
 import qualified System.Logger.Settings  as Logger
+
+import           Network.Google.BigQuery
 
 
 -- * Instances
@@ -45,6 +48,25 @@ instance HasSeverity Google.LogLevel where
     s Logger.Error = Google.Error
     s Logger.Fatal = Google.Error
     s Logger.Info  = Google.Info
+
+------------------------------------------------------------------------------
+-- | Define and use a BigQuery @Schema@ for a @StatusEvent@, in order to
+--   deserialise the given row of @TableCell@ values.
+instance HasSchema StatusEvent where
+  schemaOf _ =
+    let i = Leaf "id" (Just REQUIRED) Nothing STRING
+        d = Leaf "datetime" (Just REQUIRED) Nothing DATETIME
+        p = Leaf "platform" (Just REQUIRED) Nothing STRING
+        s = Leaf "service" (Just REQUIRED) Nothing STRING
+        l = Leaf "severity" (Just REQUIRED) Nothing INT64
+        x = Leaf "status" Nothing Nothing STRING
+        m = Leaf "message" Nothing Nothing STRING
+    in  Schema [i, d, p, s, l, x, m]
+  fromCells cs = case Aeson.fromJSON <$> toObject sc cs of
+    Just (Aeson.Success x) -> Just x
+    _                      -> Nothing
+    where
+      sc = schemaOf (Proxy :: Proxy StatusEvent)
 
 
 -- * Some standard loggers

@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric, DerivingStrategies,
              DuplicateRecordFields, FlexibleInstances, InstanceSigs,
              NamedFieldPuns, NoImplicitPrelude, OverloadedStrings, RankNTypes,
-             RecordWildCards, ScopedTypeVariables, StandaloneDeriving #-}
+             RecordWildCards, ScopedTypeVariables, StandaloneDeriving,
+             TupleSections #-}
 
 module Network.Google.BigQuery.Schema
   (
@@ -15,14 +16,18 @@ module Network.Google.BigQuery.Schema
 
   , toSchema
   , fromSchema
+  , keys
+  , toObject
   )
 where
 
-import           Data.Aeson      as Aeson
-import qualified Gogol.BigQuery  as BQ
+import           Data.Aeson        as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
+import qualified Data.Map.Strict   as Map
+import qualified Gogol.BigQuery    as BQ
 import           Relude
 import           Text.Printf
-import           Web.HttpApiData (FromHttpApiData (..))
+import           Web.HttpApiData   (FromHttpApiData (..))
 
 
 -- * Data conversion functions that use a schema definition
@@ -202,6 +207,26 @@ fromSchema  = BQ.TableSchema . Just . map fromFields . fields
     subFields n m d fs =
       let f' = mkField n m d RECORD
       in  f' { BQ.fields = Just $ fromFields <$> fs }
+
+------------------------------------------------------------------------------
+-- | Get the top-level keys of a schema (and preserving the correct ordering).
+keys :: Schema -> [Text]
+keys (Schema fs) = go fs
+  where
+    go (Node k _ _ _:xs) = k:go xs
+    go (Leaf k _ _ _:xs) = k:go xs
+    go []                = []
+
+------------------------------------------------------------------------------
+-- | Use the given schema to attempt to build a JSON @Value@ from the row of
+--   @TableCell@ values.
+toObject :: Schema -> [BQ.TableCell] -> Maybe Aeson.Value
+toObject sc cs
+  | length cs == length kv = Just $ go kv
+  | otherwise              = Nothing
+  where
+    kv = zipWith (\k mv -> (k,) <$> mv) (keys sc) (map BQ.v cs)
+    go = Aeson.Object . Aeson.fromMapText . Map.fromList . catMaybes
 
 ------------------------------------------------------------------------------
 err :: String -> Text -> a

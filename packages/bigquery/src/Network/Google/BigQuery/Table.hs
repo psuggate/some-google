@@ -10,6 +10,7 @@ module Network.Google.BigQuery.Table
   (
     module Export
   , Table (..)
+  , newTable
 
   , Schema (..)
   , Field (..)
@@ -45,15 +46,16 @@ import           Data.Maybe                     (fromJust)
 import           Network.Google.BigQuery.Util   (jsonOpts')
 
 
--- ** Table data-types
+-- * Table data-types
 ------------------------------------------------------------------------------
 data Table
   = Table
-      { table'id        :: TableId
-      , table'name      :: Maybe Text
-      , table'schema    :: Schema
-      , table'partition :: Maybe Partitioning
-      , table'type      :: Maybe TableType
+      { table'id          :: TableId
+      , table'name        :: Maybe Text
+      , table'description :: Maybe Text
+      , table'schema      :: Maybe Schema
+      , table'partition   :: Maybe Partitioning
+      , table'type        :: Maybe TableType
       }
   deriving (Eq, Generic, NFData, Show)
 
@@ -93,86 +95,6 @@ instance FromHttpApiData TableType where
   parseUrlPiece = readEither . toString
 
 
-{-- }
--- ** Schema definition data types
-------------------------------------------------------------------------------
--- | Schema-definition data type, that supports just a (strict) subset of the
---   BigQuery Schema functionality.
-newtype Schema
-  = Schema { schema'fields :: [Field] }
-  deriving (Eq, Generic, Show)
-  deriving anyclass (NFData)
-
--- TODO: parse via the `gogol-bigquery` data type, and then extract the
---   desired fields?
-instance FromJSON Schema where parseJSON = genericParseJSON jsonOpts'
-instance ToJSON   Schema where toJSON = genericToJSON jsonOpts'
-
-------------------------------------------------------------------------------
--- | Encoding of a subset of the BigQuery schema data type.
-data Field
-  = Field
-      { field'name   :: Text
-      , field'mode   :: Maybe FieldMode
-      , field'type   :: FieldType
-      , field'fields :: Maybe [Field]
-      }
-  deriving (Eq, Generic, NFData, Show)
-
-{-- }
-data Field
-  = Column Text FieldMode FieldType
-  | Struct Text FieldMode [Field]
-  deriving (Eq, Generic, NFData, Show)
---}
-
--- TODO: parse via the `gogol-bigquery` data type, and then extract the
---   desired fields?
-instance FromJSON Field where parseJSON = genericParseJSON jsonOpts'
-instance ToJSON   Field where toJSON = genericToJSON jsonOpts'
-
-------------------------------------------------------------------------------
-data FieldMode
-  = NULLABLE
-  | REQUIRED
-  | REPEATED
-  deriving (Enum, Eq, Generic, NFData, Ord, Read, Show)
-
-deriving instance FromJSON FieldMode
-deriving instance ToJSON   FieldMode
-
-instance FromHttpApiData FieldMode where
-  parseUrlPiece = readEither . toString
-
-------------------------------------------------------------------------------
--- | Name of the (SQL) data type for data that is stored within the cells of
---   the corresponding column.
-data FieldType
-  = INTEGER
-  | FLOAT
-  | INT64
-  | FLOAT64
-  | NUMERIC
-  | BOOL
-  | STRING
-  | BYTES
-  | DATE
-  | DATETIME
-  | TIME
-  | TIMESTAMP
-  | STRUCT
-  | RECORD
-  | GEOGRAPHY
-  deriving (Enum, Eq, Generic, NFData, Ord, Read, Show)
-
-deriving instance FromJSON FieldType
-deriving instance ToJSON   FieldType
-
-instance FromHttpApiData FieldType where
-  parseUrlPiece = readEither . toString
---}
-
-
 -- * Instances
 ------------------------------------------------------------------------------
 instance GGet Table TableId where
@@ -184,6 +106,8 @@ instance GGet Table TableId where
     let cmd = BQ.newBigQueryTablesGet did pid tid
     view environment >>= fmap toTable . flip Google.send cmd
 
+------------------------------------------------------------------------------
+-- | Create a table, and using the given table-arguments.
 instance GPut Table TableId where
   type PutAuth Table = '[ BQ.Bigquery'FullControl
                         , BQ.CloudPlatform'FullControl ]
@@ -193,6 +117,7 @@ instance GPut Table TableId where
         pay = fromTable prj did tab
     view environment >>= fmap (fromJust . (^.guid)) . flip Google.send cmd
 
+------------------------------------------------------------------------------
 instance GList TableId where
   type ListAuth TableId = '[ BQ.Bigquery'FullControl
                            , BQ.CloudPlatform'FullControl
@@ -203,34 +128,6 @@ instance GList TableId where
         res :: BQ.TableList -> [BQ.TableList_TablesItem]
         res = fromMaybe [] . BQ.tables
     view environment >>= (mapMaybe (^.guid) . res <$>) . flip Google.send cmd
-
-{-- }
-instance GAPI Table TableId where
-  type ScopesFor Table = BigQueryScopes
-  type ExtraArgs Table = DatasetId
-
-  ginsert :: Project -> DatasetId -> Table -> Google BigQueryScopes TableId
-  ginsert prj did tab = GoogleT $ do
-    let cmd = BQ.newBigQueryTablesInsert (coerce did) pay (coerce prj)
-        pay = fromTable prj did tab
-    view environment >>= fmap (fromJust . (^.guid)) . flip Google.send cmd
-
-  glookup :: Project -> DatasetId -> TableId -> Google BigQueryScopes Table
-  glookup prj did tid = GoogleT $ do
-    let cmd = BQ.newBigQueryTablesGet (coerce did) (coerce prj) (coerce tid)
-    view environment >>= fmap toTable . flip Google.send cmd
-
-  glist :: Project -> DatasetId -> Google BigQueryScopes [TableId]
-  glist prj did = GoogleT $ do
-    let cmd = BQ.newBigQueryTablesList (coerce did) (coerce prj)
-        res :: BQ.TableList -> [BQ.TableList_TablesItem]
-        res = fromMaybe [] . BQ.tables
-    view environment >>=
-      (catMaybes . map (^.guid) . res <$>) . flip Google.send cmd
-
-  gdelete :: Project -> DatasetId -> TableId -> Google BigQueryScopes ()
-  gdelete _ _ _ = pure ()
---}
 
 ------------------------------------------------------------------------------
 instance GHasRef BQ.Table (Maybe BQ.TableReference) where
@@ -266,24 +163,45 @@ instance GHasId BQ.TableList_TablesItem (Maybe TableId) where
   guid  = lens ((^.gref) >=> (^.guid)) (\r s -> r & over gref (set guid s <$>))
 
 
+-- * Smart constructors
+------------------------------------------------------------------------------
+newTable :: TableId -> Schema -> Table
+newTable t s = Table t Nothing Nothing (Just s) Nothing Nothing
+
+
 -- * API
 ------------------------------------------------------------------------------
 -- | Create a new table.
-createTable :: Project -> DatasetId -> Table -> Google BigQueryScopes TableId
+createTable
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (PutAuth Table) scopes
+  => Project
+  -> DatasetId
+  -> Table
+  -> Google scopes TableId
 createTable  = gput
 
-lookupTable :: Project -> DatasetId -> TableId -> Google BigQueryScopes Table
+lookupTable
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (GetAuth Table) scopes
+  => Project
+  -> DatasetId
+  -> TableId
+  -> Google scopes Table
 lookupTable  = gget
 
-listTables :: Project -> DatasetId -> Google BigQueryScopes [TableId]
+listTables
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (ListAuth TableId) scopes
+  => Project
+  -> DatasetId
+  -> Google scopes [TableId]
 listTables  = glist
 
 ------------------------------------------------------------------------------
 tableList
   :: Google.KnownScopes scopes
-  => Google.SatisfyScope '[ BQ.Bigquery'FullControl
-                          , BQ.CloudPlatform'FullControl
-                          , BQ.CloudPlatform'ReadOnly ] scopes
+  => Google.SatisfyScope (ListAuth TableId) scopes
   => Project
   -> DatasetId
   -> Google scopes [Table]
@@ -298,35 +216,42 @@ tableList (Project pid) (DatasetId did) = GoogleT $ do
 ------------------------------------------------------------------------------
 fromTable :: Project -> DatasetId -> Table -> BQ.Table
 fromTable prj did Table{..} = BQ.newTable
-  { BQ.tableReference = Just ref
+  { BQ.tableReference = ref table'id
   , BQ.friendlyName = table'name
-  , BQ.schema = Just $ fromSchema table'schema
+  , BQ.description = table'description
+  , BQ.schema = fromSchema <$> table'schema
   , BQ.timePartitioning = Just prt
   , BQ.type' = show <$> table'type
   }
   where
-    tid = getTableId table'id
-    ref = BQ.TableReference (Just (coerce did)) (Just (coerce prj)) (Just tid)
+    ref = Just . tableRef prj did
     prt = BQ.newTimePartitioning
       { BQ.type' = show <$> table'partition } :: BQ.TimePartitioning
 
 toTable :: BQ.Table -> Table
-toTable BQ.Table{friendlyName, schema, tableReference, timePartitioning, type'} = Table
-  { table'id = fromJust $ tableReference >>= (^.guid)
-  , table'name = friendlyName
-  , table'schema = maybe (error "missing schema") toSchema schema
-  , table'partition = prt
-  , table'type = readMaybe . toString =<< type'
+toTable BQ.Table{description, friendlyName, schema, tableReference, timePartitioning, type'} = Table
+  { table'id          = fromJust $ tableReference >>= (^.guid)
+  , table'name        = friendlyName
+  , table'description = description
+  , table'schema      = toSchema <$> schema
+  , table'partition   = prt
+  , table'type        = readMaybe . toString =<< type'
   }
   where
     typ = BQ.type' :: BQ.TimePartitioning -> Maybe Text
     prt = timePartitioning >>= typ >>= readMaybe . toString
 
+tableRef :: Project -> DatasetId -> TableId -> BQ.TableReference
+tableRef (Project pid) (DatasetId did) (TableId tid) =
+  BQ.TableReference (Just did) (Just pid) (Just tid)
+
+------------------------------------------------------------------------------
 fromTablesItem :: BQ.TableList_TablesItem -> Table
 fromTablesItem item@BQ.TableList_TablesItem{friendlyName, timePartitioning, type'} = Table
   { table'id = fromJust $ item ^. guid
   , table'name = friendlyName
-  , table'schema = Schema []
+  , table'description = Nothing
+  , table'schema = Nothing
   , table'partition = prt
   , table'type = readMaybe . toString =<< type'
   }

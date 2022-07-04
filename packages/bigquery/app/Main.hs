@@ -1,15 +1,14 @@
-{-# LANGUAGE DeriveGeneric, LambdaCase, MultiParamTypeClasses,
+{-# LANGUAGE DataKinds, DeriveGeneric, LambdaCase, MultiParamTypeClasses,
              NoImplicitPrelude, OverloadedStrings, ScopedTypeVariables,
-             TemplateHaskell #-}
+             TemplateHaskell, TypeFamilies #-}
 
 module Main where
 
 import           Control.Lens            (lens, makeLenses, view, (.~), (^.))
 import           Control.Monad.Google    as Google
 import           Gogol.Compute.Metadata  (getProjectId)
-import           Network.Google.BigQuery (BigQueryScopes, DatasetId (..),
-                                          Location (..), Project (..), Table,
-                                          TableId (..))
+import           Network.Google.BigQuery (DatasetId (..), Location (..),
+                                          Project (..), Table, TableId (..))
 import qualified Network.Google.BigQuery as BQ
 import           Options.Applicative
 import           Relude
@@ -37,10 +36,37 @@ data Opts
       }
   deriving (Generic, Show)
 
+instance Aeson.FromJSON Opts where
+  parseJSON = Aeson.withObject "Opts" $ \o -> do
+    p <- o Aeson..: "project"
+    d <- o Aeson..: "dataset"
+    t <- o Aeson..: "tableId"
+    l <- o Aeson..: "location"
+    v <- o Aeson..: "verbose"
+    pure $ Opts p d t l v
+
+instance Aeson.ToJSON Opts where
+  toJSON (Opts p d t l v) = Aeson.object
+    [ "project"  Aeson..= p
+    , "dataset"  Aeson..= d
+    , "tableId"  Aeson..= l
+    , "location" Aeson..= t
+    , "verbose"  Aeson..= v
+    ]
+
 makeLenses ''Opts
 
 instance BQ.HasProject Opts Project where
   projectOf = lens (coerce . _project) $ \r s -> r { _project = BQ.getProject s }
+
+instance BQ.HasSchema Opts where
+  schemaOf _ = BQ.Schema [p, d, t, l, v]
+    where
+      p = BQ.Leaf "project"  Nothing Nothing BQ.STRING
+      d = BQ.Leaf "dataset"  Nothing Nothing BQ.STRING
+      t = BQ.Leaf "tableId"  Nothing Nothing BQ.STRING
+      l = BQ.Leaf "location" Nothing Nothing BQ.STRING
+      v = BQ.Leaf "verbose"  Nothing Nothing BQ.BOOL
 
 
 -- * Helpers
@@ -63,7 +89,10 @@ parser  = Opts
 
 ------------------------------------------------------------------------------
 -- | Try to find a suitable @Project@ name/id
-googleProjectId :: Opts -> Google BigQueryScopes Opts
+googleProjectId
+  :: Google.KnownScopes scopes
+  => Opts
+  -> Google scopes Opts
 googleProjectId opts = do
   liftIO (lookupEnv "GCLOUD_PROJECT") >>= \case
     Just pr -> pure $ opts & BQ.projectOf .~ Project (fromString pr)
@@ -92,7 +121,11 @@ showCreds  = do
 
 ------------------------------------------------------------------------------
 -- | Fetch information for the indicated table.
-dumpTable :: Opts -> Google BigQueryScopes Table
+dumpTable
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (BQ.GetAuth Table) scopes
+  => Opts
+  -> Google scopes Table
 dumpTable opts = do
   let prj = opts^.BQ.projectOf
       did = DatasetId $ opts^.dataset
@@ -109,7 +142,10 @@ disp  = putTextLn . decodeUtf8 . YAML.encodePretty ycfg
   where
     ycfg = YAML.setConfCompare compare YAML.defConfig
 
-runq :: Opts -> Google BigQueryScopes ()
+runq
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (BQ.GetAuth Table) scopes
+  => Opts -> Google scopes ()
 runq opts = do
   let prj = opts^.BQ.projectOf
       did = DatasetId $ opts^.dataset
@@ -129,7 +165,7 @@ main  = do
   print args
 
   _ <- withGoogle $ do
-    showCreds
+    showCreds :: Google (BQ.PutAuth Table) ()
     opts <- googleProjectId args
     let proj = opts ^. BQ.projectOf
         did  = BQ.DatasetId $ opts ^. dataset
@@ -139,6 +175,7 @@ main  = do
     liftIO . mapM_ print =<< BQ.listTables proj did
     dumpTable opts
     liftIO . mapM_ print =<< BQ.listJobs proj
-    liftIO . mapM_ (disp :: Aeson.Value -> IO ()) =<< BQ.list proj did tid (Just 10)
+--     liftIO . mapM_ (disp :: Aeson.Value -> IO ()) =<< BQ.list proj did tid (Just 10)
+    liftIO . mapM_ (disp :: Opts -> IO ()) =<< BQ.list proj did tid (Just 10)
     runq opts
   putTextLn "todo ..."

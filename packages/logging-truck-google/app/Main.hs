@@ -3,15 +3,21 @@
 
 module Main where
 
-import           Control.Lens           (view)
-import           Control.Monad.Google   as Google
+import           Control.Lens            (view)
+import           Control.Monad.Google    as Google
 import           Data.Google.Types
-import           Gogol                  (HasEnv (..))
-import qualified Gogol.Auth             as Google
-import           Gogol.Compute.Metadata (getProjectId)
-import           Gogol.Internal.Auth    (Credentials (..), _serviceId)
+import           Gogol                   (HasEnv (..))
+import qualified Gogol.Auth              as Google
+import           Gogol.Compute.Metadata  (getProjectId)
+import           Gogol.Internal.Auth     (Credentials (..), _serviceId)
 import           Relude
 import           Text.Printf
+
+import           Data.Event.Status
+import           Network.Google.BigQuery (DatasetId, HasSchema (..),
+                                          Schema (..), TableId)
+import qualified Network.Google.BigQuery as BQ
+import           System.Logger.Google
 
 
 ------------------------------------------------------------------------------
@@ -39,6 +45,18 @@ showCreds  = do
       putStrLn $ printf "Service account:\n - ClientId: %s\n" (coerce cid :: Text)
     FromUser _       -> putTextLn "FromUser"
     FromTokenFile fp -> putStrLn $ printf "Token file: %s" fp
+
+createTable
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (BQ.PutAuth BQ.Table) scopes
+  => Project
+  -> DatasetId
+  -> TableId
+  -> Google scopes BQ.TableId
+createTable prj did tid = do
+  let tab = BQ.newTable tid scm
+      scm = schemaOf (Proxy :: Proxy StatusEvent)
+  BQ.createTable prj did tab
 
 
 -- * Main entry-point

@@ -1,8 +1,8 @@
 {-# LANGUAGE DataKinds, DeriveGeneric, DerivingStrategies,
              DuplicateRecordFields, FlexibleContexts,
              GeneralisedNewtypeDeriving, NoImplicitPrelude, OverloadedStrings,
-             RankNTypes, RecordWildCards, ScopedTypeVariables,
-             TupleSections #-}
+             RankNTypes, RecordWildCards, ScopedTypeVariables, TupleSections,
+             TypeFamilies #-}
 
 module Network.Google.BigQuery.Tabledata
   (
@@ -19,13 +19,14 @@ module Network.Google.BigQuery.Tabledata
   )
 where
 
-import           Control.Lens                  (view)
-import           Control.Monad.Google          as Export
-import           Data.Aeson                    as Aeson
-import qualified Gogol                         as Google
-import qualified Gogol.Auth.Scope              as Google
-import qualified Gogol.BigQuery                as BQ
-import           Network.Google.BigQuery.Types as Export
+import           Control.Lens                   (view)
+import           Control.Monad.Google           as Export
+import           Data.Aeson                     as Aeson
+import qualified Gogol                          as Google
+import qualified Gogol.Auth.Scope               as Google
+import qualified Gogol.BigQuery                 as BQ
+import           Network.Google.BigQuery.Schema
+import           Network.Google.BigQuery.Types  as Export
 import           Relude
 
 
@@ -55,7 +56,6 @@ insertAll
                           , BQ.Bigquery'Insertdata
                           , BQ.CloudPlatform'FullControl ] scopes
   => ToJSON a
-  => FromJSON a
   => Project
   -> DatasetId
   -> TableId
@@ -70,12 +70,11 @@ insertAll (Project prj) (DatasetId did) (TableId tid) rows = GoogleT $ do
 ------------------------------------------------------------------------------
 -- | List all table data.
 list
-  :: Google.KnownScopes scopes
+  :: forall scopes a. Google.KnownScopes scopes
   => Google.SatisfyScope '[ BQ.Bigquery'FullControl
                           , BQ.CloudPlatform'FullControl
                           , BQ.CloudPlatform'ReadOnly ] scopes
-  => ToJSON a
-  => FromJSON a
+  => HasSchema a
   => Project
   -> DatasetId
   -> TableId
@@ -84,17 +83,14 @@ list
 list prj did tid num = GoogleT $ do
   let cmd = (BQ.newBigQueryTabledataList (coerce did) (coerce prj) (coerce tid))
         { BQ.maxResults = num } :: BQ.BigQueryTabledataList
-      row = Aeson.decode . Aeson.encode
-  res <- view environment >>=
-    fmap (\BQ.TableDataList{..} -> rows) . flip Google.send cmd
-  pure $ maybe [] (catMaybes . map row) res
+  res <- view environment >>= flip Google.send cmd
+  pure . fromMaybe [] $ rowsOf res
 
 
 -- * Conversion helpers
 ------------------------------------------------------------------------------
 fromTableRows
   :: forall a. ToJSON a
-  => FromJSON a
   => TableRows a
   -> BQ.TableDataInsertAllRequest
 fromTableRows TableRows{..} = BQ.newTableDataInsertAllRequest
