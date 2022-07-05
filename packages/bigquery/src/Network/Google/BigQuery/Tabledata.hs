@@ -52,9 +52,10 @@ newtype TableSuffix
 -- | Stream the given data into the indicated table.
 insertAll
   :: Google.KnownScopes scopes
-  => Google.SatisfyScope '[ BQ.Bigquery'FullControl
-                          , BQ.Bigquery'Insertdata
-                          , BQ.CloudPlatform'FullControl ] scopes
+  => Google.SatisfyScope (Google.Scopes BQ.BigQueryTabledataInsertAll) scopes
+--   => Google.SatisfyScope '[ BQ.Bigquery'FullControl
+--                           , BQ.Bigquery'Insertdata
+--                           , BQ.CloudPlatform'FullControl ] scopes
   => ToJSON a
   => Project
   -> DatasetId
@@ -71,9 +72,10 @@ insertAll (Project prj) (DatasetId did) (TableId tid) rows = GoogleT $ do
 -- | List all table data.
 list
   :: forall scopes a. Google.KnownScopes scopes
-  => Google.SatisfyScope '[ BQ.Bigquery'FullControl
-                          , BQ.CloudPlatform'FullControl
-                          , BQ.CloudPlatform'ReadOnly ] scopes
+--   => Google.SatisfyScope '[ BQ.Bigquery'FullControl
+--                           , BQ.CloudPlatform'FullControl
+--                           , BQ.CloudPlatform'ReadOnly ] scopes
+  => Google.SatisfyScope (Google.Scopes BQ.BigQueryTabledataList) scopes
   => HasSchema a
   => Project
   -> DatasetId
