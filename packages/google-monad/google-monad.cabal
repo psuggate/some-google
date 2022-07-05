@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           google-monad
-version:        0.1.0.8
+version:        0.1.0.9
 synopsis:       Short description of your package
 description:    Please see the README on GitHub at <https://github.com/githubabuser/google-cloud#readme>
 category:       Web
@@ -32,6 +32,31 @@ library
     , base >=4.7 && <5
     , gogol
     , gogol-core
+    , http-api-data
+    , lens
+    , mtl
+    , openapi3
+    , relude
+    , resourcet
+    , unliftio-core
+    , uuid
+  default-language: Haskell2010
+
+test-suite google-monad-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_google_monad
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , gogol
+    , gogol-core
+    , google-monad
+    , hspec
     , http-api-data
     , lens
     , mtl

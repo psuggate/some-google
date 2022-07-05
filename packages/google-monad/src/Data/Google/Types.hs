@@ -2,7 +2,8 @@
              DerivingVia, FlexibleContexts, FunctionalDependencies,
              GeneralisedNewtypeDeriving, MultiParamTypeClasses,
              OverloadedStrings, PolyKinds, RankNTypes, StandaloneDeriving,
-             TypeFamilies, TypeFamilyDependencies #-}
+             TypeFamilies, TypeFamilyDependencies, TypeOperators,
+             UndecidableInstances #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -18,6 +19,8 @@
 module Data.Google.Types
   (
     module Export
+  , Concat
+  , Intersect
 
   , GHasId (..)
   , GHasRef (..)
@@ -54,6 +57,52 @@ import           Gogol                (Base64 (..))
 import           Gogol.Auth.Scope     (SatisfyScope)
 import           Relude
 import           Web.HttpApiData      (FromHttpApiData)
+
+
+-- * Type-level operations for scopes
+------------------------------------------------------------------------------
+-- | Merge a list of scope-lists.
+type family Concat (xs :: [[Symbol]]) where
+  Concat xs = Nub (Concat' xs)
+
+type family Concat' xs where
+  Concat' (x ': xs) = x ++ Concat' xs
+  Concat' '[] = '[]
+
+------------------------------------------------------------------------------
+-- | Find the intersection of the two lists of auth-scopes.
+type family Intersect xs ys where
+  Intersect '[] _ = '[]
+  Intersect _ '[] = '[]
+  Intersect (x ': xs) ys = Intersect' x (Elem x ys) xs ys
+
+type family Intersect' x (b :: Bool) xs ys where
+  Intersect' x 'True  xs ys = x ': Intersect xs ys
+  Intersect' _ 'False xs ys = Intersect xs ys
+
+------------------------------------------------------------------------------
+-- | Append two lists.
+type family (++) xs ys where
+  (++) xs '[] = xs
+  (++) '[] ys = ys
+  (++) (x ': xs) ys = x ': (xs ++ ys)
+
+-- | Remove duplicates from a list.
+type family Nub xs where
+  Nub '[] = '[]
+  Nub (x ': xs) = x ': Nub (Delete x xs)
+
+-- | Remove a specific element from a list.
+type family Delete x xs where
+  Delete x '[] = '[]
+  Delete x (x ': ys) = Delete x ys
+  Delete x (y ': ys) = y ': Delete x ys
+
+-- | Type-level 'Data.List.elem'.
+type family Elem (x :: k) (xs :: [k]) :: Bool where
+  Elem _ '[] = 'False
+  Elem x (x ': xs) = 'True
+  Elem x (y ': xs) = Elem x xs
 
 
 -- * Convenience function-families
