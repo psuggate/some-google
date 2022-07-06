@@ -1,5 +1,5 @@
 name:                logging-truck-google
-version:             0.1.0.2
+version:             0.1.0.3
 github:              "psuggate/some-google"
 license:             BSD3
 author:              "Patrick Suggate"
@@ -41,4 +41,8 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - bigquery
+    - bytestring
+    - file-embed
     - logging-truck-google
+    - random
+    - yaml

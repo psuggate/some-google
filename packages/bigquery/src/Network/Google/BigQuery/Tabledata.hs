@@ -1,8 +1,8 @@
-{-# LANGUAGE DataKinds, DeriveGeneric, DerivingStrategies,
+{-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, DerivingStrategies,
              DuplicateRecordFields, FlexibleContexts,
              GeneralisedNewtypeDeriving, NoImplicitPrelude, OverloadedStrings,
-             RankNTypes, RecordWildCards, ScopedTypeVariables, TupleSections,
-             TypeFamilies #-}
+             RankNTypes, RecordWildCards, ScopedTypeVariables,
+             StandaloneDeriving, TupleSections, TypeFamilies #-}
 
 module Network.Google.BigQuery.Tabledata
   (
@@ -12,10 +12,12 @@ module Network.Google.BigQuery.Tabledata
   , TableSuffix (..)
 
   , insertAll
+  , insertAll'
   , list
 
   , fromTableRows
   , newTableRows
+  , tableRowsWith
   )
 where
 
@@ -41,10 +43,15 @@ data TableRows a
       }
   deriving (Generic)
 
+deriving instance ToJSON a => ToJSON (TableRows a)
+deriving instance FromJSON a => FromJSON (TableRows a)
+
 newtype TableSuffix
   = TableSuffix { getTableSuffix :: Text }
-  deriving (Generic)
+  deriving (Eq, Generic, Show)
   deriving newtype (FromJSON, ToJSON)
+
+instance ToText TableSuffix where toText = getTableSuffix
 
 
 -- * Table data API
@@ -53,28 +60,41 @@ newtype TableSuffix
 insertAll
   :: Google.KnownScopes scopes
   => Google.SatisfyScope (Google.Scopes BQ.BigQueryTabledataInsertAll) scopes
---   => Google.SatisfyScope '[ BQ.Bigquery'FullControl
---                           , BQ.Bigquery'Insertdata
---                           , BQ.CloudPlatform'FullControl ] scopes
   => ToJSON a
   => Project
   -> DatasetId
   -> TableId
   -> TableRows a
   -> Google scopes Int
+insertAll prj did tid rows = do
+  maybe 0 length . BQ.insertErrors <$> insertAll' prj did tid rows
+
+{-- }
 insertAll (Project prj) (DatasetId did) (TableId tid) rows = GoogleT $ do
   let cmd = BQ.newBigQueryTabledataInsertAll did req prj tid
       req = fromTableRows rows
-  view environment >>=
-    (maybe 0 length . BQ.insertErrors <$>) . flip Google.send cmd
+  env <- view environment
+  maybe 0 length . BQ.insertErrors <$> Google.send env cmd
+--}
+
+insertAll'
+  :: Google.KnownScopes scopes
+  => Google.SatisfyScope (Google.Scopes BQ.BigQueryTabledataInsertAll) scopes
+  => ToJSON a
+  => Project
+  -> DatasetId
+  -> TableId
+  -> TableRows a
+  -> Google scopes BQ.TableDataInsertAllResponse
+insertAll' (Project prj) (DatasetId did) (TableId tid) rows = GoogleT $ do
+  let cmd = BQ.newBigQueryTabledataInsertAll did req prj tid
+      req = fromTableRows rows
+  view environment >>= flip Google.send cmd
 
 ------------------------------------------------------------------------------
 -- | List all table data.
 list
   :: forall scopes a. Google.KnownScopes scopes
---   => Google.SatisfyScope '[ BQ.Bigquery'FullControl
---                           , BQ.CloudPlatform'FullControl
---                           , BQ.CloudPlatform'ReadOnly ] scopes
   => Google.SatisfyScope (Google.Scopes BQ.BigQueryTabledataList) scopes
   => HasSchema a
   => Project
@@ -105,6 +125,12 @@ fromTableRows TableRows{..} = BQ.newTableDataInsertAllRequest
     go :: Maybe Text -> a -> BQ.TableDataInsertAllRequest_RowsItem
     go mid = BQ.TableDataInsertAllRequest_RowsItem mid . Just . jsonObject'
 
+------------------------------------------------------------------------------
+-- | Use the given function to associate a unique identifier to each row that
+--   is being inserted.
+tableRowsWith :: Foldable f => (a -> Maybe Text) -> f a -> TableRows a
+tableRowsWith fn =
+  TableRows False False `flip` Nothing <<< map (fn &&& id) . toList
+
 newTableRows :: Foldable f => f a -> TableRows a
-newTableRows  =
-  TableRows False False `flip` Nothing <<< map (Nothing,) . toList
+newTableRows  = tableRowsWith (const Nothing)

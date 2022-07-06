@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           logging-truck-google
-version:        0.1.0.2
+version:        0.1.0.3
 synopsis:       Short description of your package
 description:    Please see the README on GitHub at <https://github.com/psuggate/some-google/packages/logging-truck-google#readme>
 category:       Web
@@ -50,6 +50,7 @@ library
 executable logging-truck-google-exe
   main-is: Main.hs
   other-modules:
+      Util
       Paths_logging_truck_google
   hs-source-dirs:
       app
@@ -58,7 +59,9 @@ executable logging-truck-google-exe
       aeson
     , base >=4.7 && <5
     , bigquery
+    , bytestring
     , co-log-core
+    , file-embed
     , gogol
     , gogol-bigquery
     , gogol-core
@@ -67,6 +70,8 @@ executable logging-truck-google-exe
     , lens
     , logging-truck
     , logging-truck-google
+    , random
     , relude
     , unliftio-core
+    , yaml
   default-language: Haskell2010

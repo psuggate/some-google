@@ -55,7 +55,7 @@ instance HasSeverity Google.LogLevel where
 instance HasSchema StatusEvent where
   schemaOf _ =
     let i = Leaf "id" (Just REQUIRED) Nothing STRING
-        d = Leaf "datetime" (Just REQUIRED) Nothing DATETIME
+        d = Leaf "datetime" (Just REQUIRED) Nothing TIMESTAMP
         p = Leaf "platform" (Just REQUIRED) Nothing STRING
         s = Leaf "service" (Just REQUIRED) Nothing STRING
         l = Leaf "severity" (Just REQUIRED) Nothing INT64

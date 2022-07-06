@@ -6,7 +6,6 @@ module Main where
 
 import           Control.Lens            (lens, makeLenses, view, (.~), (^.))
 import           Control.Monad.Google    as Google
-import           Gogol.Compute.Metadata  (getProjectId)
 import           Network.Google.BigQuery (DatasetId (..), Location (..),
                                           Project (..), Table, TableId (..))
 import qualified Network.Google.BigQuery as BQ
@@ -18,7 +17,6 @@ import qualified Gogol.Auth              as Google
 import           Gogol.Internal.Auth     (Credentials (..), _serviceId)
 
 import qualified Data.Aeson              as Aeson
-import qualified Data.Yaml               as YAML
 import qualified Data.Yaml.Pretty        as YAML
 
 import qualified Gogol.BigQuery          as BQ (QueryResponse (..))
@@ -67,6 +65,11 @@ instance BQ.HasSchema Opts where
       t = BQ.Leaf "tableId"  Nothing Nothing BQ.STRING
       l = BQ.Leaf "location" Nothing Nothing BQ.STRING
       v = BQ.Leaf "verbose"  Nothing Nothing BQ.BOOL
+  fromCells os = case Aeson.fromJSON <$> BQ.toObject sc os of
+    Just (Aeson.Success x) -> Just x
+    _                      -> Nothing
+    where
+      sc = BQ.schemaOf (Proxy :: Proxy Opts)
 
 
 -- * Helpers
@@ -173,7 +176,7 @@ main  = do
     liftIO . putStrLn $ printf "Project: %s" (coerce proj :: Text)
     liftIO . mapM_ print =<< BQ.listDatasets proj
     liftIO . mapM_ print =<< BQ.listTables proj did
-    dumpTable opts
+    _ <- dumpTable opts
     liftIO . mapM_ print =<< BQ.listJobs proj
 --     liftIO . mapM_ (disp :: Aeson.Value -> IO ()) =<< BQ.list proj did tid (Just 10)
     liftIO . mapM_ (disp :: Opts -> IO ()) =<< BQ.list proj did tid (Just 10)

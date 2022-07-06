@@ -46,6 +46,7 @@ newtype DatasetId
   deriving newtype (FromHttpApiData, FromJSON, NFData, ToJSON)
   deriving (Eq, Generic, Show)
 
+instance ToText   DatasetId where toText     = getDatasetId
 instance IsString DatasetId where fromString = DatasetId . toText
 
 
@@ -55,6 +56,9 @@ newtype TableId
   = TableId { getTableId :: Text }
   deriving newtype (FromHttpApiData, FromJSON, NFData, ToJSON)
   deriving (Eq, Generic, Show)
+
+instance ToText   TableId where toText     = getTableId
+instance IsString TableId where fromString = TableId . toText
 
 
 -- * Lenses & instances
