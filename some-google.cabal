@@ -55,6 +55,7 @@ executable some-google-exe
     , gogol-core
     , gogol-pubsub
     , google-monad
+    , relude
     , some-google
   default-language: Haskell2010
 

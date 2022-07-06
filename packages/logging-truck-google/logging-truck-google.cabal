@@ -75,3 +75,29 @@ executable logging-truck-google-exe
     , unliftio-core
     , yaml
   default-language: Haskell2010
+
+test-suite logging-truck-google-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_logging_truck_google
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bigquery
+    , co-log-core
+    , gogol
+    , gogol-bigquery
+    , gogol-core
+    , gogol-pubsub
+    , google-monad
+    , hspec
+    , lens
+    , logging-truck
+    , logging-truck-google
+    , relude
+    , unliftio-core
+  default-language: Haskell2010

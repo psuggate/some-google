@@ -3,6 +3,7 @@
 module BigQuery.TypesSpec where
 
 import           Data.Aeson                    as Aeson
+import qualified Gogol.BigQuery                as BQ
 import           Relude
 import           Test.Hspec
 
