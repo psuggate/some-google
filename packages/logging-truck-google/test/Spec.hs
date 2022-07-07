@@ -24,6 +24,7 @@ testRow  =
     { BQ.v = Just (Aeson.String "1.657102119810025E9") }
   , BQ.TableCell { BQ.v = Just (Aeson.String "TESTING") }
   , BQ.TableCell { BQ.v = Just (Aeson.String "logging-truck-google") }
+--   , BQ.TableCell { BQ.v = Just (Aeson.Number 2) }
   , BQ.TableCell { BQ.v = Just (Aeson.String "2") }
   , BQ.TableCell { BQ.v = Just (Aeson.String "resolved") }
   , BQ.TableCell
