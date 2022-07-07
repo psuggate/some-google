@@ -10,7 +10,8 @@ import           Test.Hspec
 ------------------------------------------------------------------------------
 -- Modules under test
 import           Network.Google.BigQuery.Schema
-import           System.Logger.Google           (StatusEvent (..))
+import           System.Logger.Google           (DateTime (..),
+                                                 StatusEvent (..))
 
 
 -- * Test data

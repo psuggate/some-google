@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           bigquery
-version:        0.1.0.13
+version:        0.1.0.14
 synopsis:       Short description of your package
 description:    Please see the README on GitHub at <https://github.com/githubabuser/google-cloud#readme>
 category:       Web
@@ -48,6 +48,8 @@ library
     , openapi3
     , relude
     , resourcet
+    , scientific
+    , time
     , unliftio-core
     , unordered-containers
   default-language: Haskell2010
@@ -75,6 +77,8 @@ executable bigquery-exe
     , optparse-applicative
     , relude
     , resourcet
+    , scientific
+    , time
     , unliftio-core
     , unordered-containers
     , yaml
@@ -107,6 +111,8 @@ test-suite bigquery-test
     , openapi3
     , relude
     , resourcet
+    , scientific
+    , time
     , unliftio-core
     , unordered-containers
   default-language: Haskell2010

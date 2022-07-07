@@ -228,6 +228,27 @@ toObject sc cs
     kv = zipWith (\k mv -> (k,) <$> mv) (keys sc) (map BQ.v cs)
     go = Aeson.Object . Aeson.fromMapText . Map.fromList . catMaybes
 
+{-- }
+cheeseTime :: Text -> Text -> Aeson.Value -> Aeson.Value
+cheeseTime t k v
+  | t /= k    = v
+  | otherwise = case v of
+      Aeson.String ts -> maybe v Aeson.String $ dateTime ts
+      _               -> v
+
+dateTime :: Text -> Maybe Text
+dateTime  = toString >>> readMaybe >>> fmap (show . utctime)
+
+systime :: Double -> SystemTime
+systime x = MkSystemTime secs nano
+  where
+    secs = floor x
+    nano = floor $ (x - fromIntegral secs) * 1e9
+
+utctime :: Scientific -> UTCTime
+utctime  = systemToUTCTime . systime . toRealFloat
+--}
+
 ------------------------------------------------------------------------------
 err :: String -> Text -> a
 err msg = error . fromString . printf msg
