@@ -26,6 +26,7 @@ import qualified Gogol                         as Google
 import qualified Gogol.Auth.Scope              as Google
 import qualified Gogol.BigQuery                as BQ
 import           Network.Google.BigQuery.Types as Export
+import           Network.Google.BigQuery.Util
 import           Relude
 
 import qualified Data.List                     as List
@@ -202,13 +203,4 @@ toReference :: Project -> DatasetId -> BQ.DatasetReference
 toReference (Project pid) (DatasetId did) = BQ.DatasetReference
   { BQ.datasetId = Just did
   , BQ.projectId = Just pid
-  }
-
-
--- * Helpers
-------------------------------------------------------------------------------
-jsonOpts' :: Options
-jsonOpts'  = defaultOptions
-  { omitNothingFields = True
-  , fieldLabelModifier = List.tail . List.dropWhile (/= '\'')
   }

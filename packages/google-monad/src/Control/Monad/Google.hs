@@ -69,6 +69,7 @@ newtype GoogleT env (scopes :: [Symbol]) m a
     ( Applicative
     , Functor
     , Monad
+    , MonadFail
     , MonadIO
     , MonadReader env
     , MonadUnliftIO
