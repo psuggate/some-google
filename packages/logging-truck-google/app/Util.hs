@@ -58,7 +58,7 @@ message' :: IO StatusMessage
 message'  = do
   let lev = [Trace ..Fatal]
   sev <- (lev!!) <$> randIntN (length lev)
-  st' <- ([resolved, running, unknown]!!) <$> randIntN 3
+  st' <- ([resolved, unknown, starting, running, stopping]!!) <$> randIntN 3
   StatusMessage sev st' <$> sentence
 
 ------------------------------------------------------------------------------
