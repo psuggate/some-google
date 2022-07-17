@@ -6,18 +6,13 @@ module Util
 
   , serviceName
   , truckService
-
-  , generateMessage
-  , message'
-  , sentence
-  , someWords
-
-  , randIntN
-  , yaml
-  , indent
-
   , package
   , version
+
+  , generateMessage
+
+  , yaml
+  , indent
   )
 where
 
@@ -25,6 +20,7 @@ import           Data.Aeson              as Aeson
 import qualified Data.ByteString.Char8   as BS
 import qualified Data.Char               as Char
 import           Data.Event.Status       as Export
+import           Data.Event.Status.Util  as Export
 import           Data.FileEmbed
 import           Data.List               ((!!))
 import qualified Data.Text               as Text
@@ -52,46 +48,10 @@ generateMessage :: IO StatusEvent
 generateMessage  = do
   let svc = "logging-truck-google"
       plt = testing :: Platform
-  message' >>= toStatusEvent plt svc
-
-message' :: IO StatusMessage
-message'  = do
-  let lev = [Trace ..Fatal]
-  sev <- (lev!!) <$> randIntN (length lev)
-  st' <- ([resolved, unknown, starting, running, stopping]!!) <$> randIntN 3
-  StatusMessage sev st' <$> sentence
-
-------------------------------------------------------------------------------
--- | Assemble some words into a sentence.
-sentence :: IO Text
-sentence  = do
-  let go 0 = pure []
-      go n = do
-        w <- (someWords!!) <$> randIntN l
-        (w:) <$> go (n-1)
-      l = length someWords
-  s  <- (+) <$> succ `fmap` randIntN 6 <*> randIntN 6
-  ws <- go s
-  let cap (w:ws') = (Char.toUpper (Text.head w) `Text.cons` Text.tail w):ws'
-  pure $ Text.unwords (cap ws) <> "."
-
-someWords :: [Text]
-someWords  = ["aardvark", "sailor", "running", "accentuates", "documentation"
-             ,"implements", "tagline", "secure", "Spartacus", "jovial", "by"
-             ,"entropy", "truck", "graphene", "holistically", "tennis", "oaf"
-             ,"butchered", "talon", "variable", "encouraging", "downright"
-             ,"pterodactyl", "dazzling", "below", "internecene", "sheepishly"
-             ,"complicated", "extreme", "onomatopoeia", "valid", "asphalt"
-             ,"stretched", "salty", "strapping", "femur", "oxygenate", "fresh"
-             ]
+  messageR >>= toStatusEvent plt svc
 
 
 -- * Miscellaneous functions
-------------------------------------------------------------------------------
--- | Generate a random integer within [0, n).
-randIntN :: Int -> IO Int
-randIntN n = floor . (*fromIntegral n) <$> (randomIO :: IO Double)
-
 ------------------------------------------------------------------------------
 -- | Pretty-print a JSON value as a YAML-formatted string.
 yaml :: Aeson.ToJSON a => a -> Text

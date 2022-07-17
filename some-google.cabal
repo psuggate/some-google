@@ -24,23 +24,6 @@ source-repository head
   type: git
   location: https://github.com/psuggate/some-google
 
-library
-  exposed-modules:
-      Lib
-  other-modules:
-      Paths_some_google
-  hs-source-dirs:
-      src
-  ghc-options: -Wall
-  build-depends:
-      base >=4.7 && <5
-    , gogol
-    , gogol-bigquery
-    , gogol-core
-    , gogol-pubsub
-    , google-monad
-  default-language: Haskell2010
-
 executable some-google-exe
   main-is: Main.hs
   other-modules:
@@ -56,7 +39,6 @@ executable some-google-exe
     , gogol-pubsub
     , google-monad
     , relude
-    , some-google
   default-language: Haskell2010
 
 test-suite some-google-test
@@ -75,5 +57,4 @@ test-suite some-google-test
     , gogol-pubsub
     , google-monad
     , hspec
-    , some-google
   default-language: Haskell2010

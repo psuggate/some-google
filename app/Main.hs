@@ -1,10 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Main where
 
-import           Lib
 import           Relude
 
 
 main :: IO ()
-main  = Lib.someFunc
+main  = putTextLn "todo ..."

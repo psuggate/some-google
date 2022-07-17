@@ -3,6 +3,7 @@
 module Main where
 
 import           Data.Aeson                     as Aeson
+import           Data.Event.Status.Util
 import qualified Gogol.BigQuery                 as BQ
 import           Relude
 import           Test.Hspec
@@ -33,6 +34,9 @@ testRow  =
     }
   ]
 
+testMsg :: IO StatusEvent
+testMsg  = messageR >>= toStatusEvent "localhost" "logging-truck-google-test"
+
 
 -- * Top-level tests
 ------------------------------------------------------------------------------
@@ -40,6 +44,10 @@ spec :: Spec
 spec  = describe "Encoding and decoding of event-types" $ do
 
   context "JSON conversions for logging events" $ do
+
+    it "can JSON -encode and -decode a @StatusEvent@" $ do
+      msg <- testMsg
+      Aeson.decode (Aeson.encode msg) `shouldBe` Just msg
 
     it "can decode a @TableRow@ from BigQuery as a @StatusEvent@" $ do
       let Just evt = toObject sch testRow

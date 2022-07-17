@@ -24,8 +24,8 @@ dependencies:
 - gogol-pubsub
 - google-monad
 
-library:
-  source-dirs: src
+# library:
+#   source-dirs: src
 
 executables:
   some-google-exe:
@@ -37,7 +37,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - relude
-    - some-google
+#     - some-google
 
 tests:
   some-google-test:
@@ -49,4 +49,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - hspec
-    - some-google
+#     - some-google
