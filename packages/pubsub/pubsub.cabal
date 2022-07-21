@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           pubsub
-version:        0.1.0.3
+version:        0.1.0.4
 synopsis:       Short description of your package
 description:    Please see the README on GitHub at <https://github.com/psuggate/some-google/packages/pubsub#readme>
 category:       Web

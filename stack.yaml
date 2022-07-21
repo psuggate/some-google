@@ -17,7 +17,7 @@ extra-deps:
   - lib/services/gogol-bigquery
   - lib/services/gogol-pubsub
 - git: https://github.com/psuggate/logging-truck.git
-  commit: 4c7778d3cce5ff917ebdd91e33310080f3c6ab8f
+  commit: fe2a8d894c3102091880d254c8ce653bbf9ed4b4
 - co-log-core-0.3.1.0@sha256:9794bdedd1391decd0e22bdfe2b11abcb42e6cff7a4531e1f8882890828f4e63,3816
 
 # flags: {}
